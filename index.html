@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QMB P2P & Financial Services</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- مكتبة Appwrite -->
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.0"></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</head>
+<body>
+
+    <!-- شاشة تسجيل الدخول -->
+    <div id="auth-screen" class="screen active">
+        <div class="auth-box">
+            <h1 class="logo-title">QMB P2P</h1>
+            <p class="subtitle">منصتك المالية المباشرة للخدمات والاستثمار</p>
+
+            <div id="email-step">
+                <input type="email" id="email-input" placeholder="أدخل البريد الإلكتروني (Gmail)">
+                <button onclick="sendOTP()" class="btn-primary">إرسال رمز التحقق</button>
+            </div>
+
+            <div id="otp-step" class="hidden">
+                <input type="number" id="otp-input" placeholder="أدخل رمز التحقق (1234)">
+                <button onclick="verifyOTP()" class="btn-primary">تأكيد الرمز</button>
+            </div>
+
+            <div id="profile-step" class="hidden">
+                <input type="text" id="fullname-input" placeholder="الاسم الكامل">
+                <input type="tel" id="phone-input" placeholder="رقم الهاتف">
+                <button onclick="completeProfile()" class="btn-primary">دخول التطبيق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- الشاشة الرئيسية -->
+    <div id="app-screen" class="screen">
+        <header class="app-header">
+            <div class="header-right">
+                <button onclick="logout()" class="icon-btn logout-color"><ion-icon name="log-out-outline"></ion-icon></button>
+                <button onclick="toggleTheme()" class="icon-btn theme-btn" id="theme-toggle-btn">
+                    <ion-icon name="moon-outline" id="theme-icon"></ion-icon>
+                </button>
+            </div>
+
+            <div class="user-profile" onclick="openProfileModal()">
+                <div class="user-details">
+                    <span class="badge-verified"><ion-icon name="checkmark-seal"></ion-icon> موثق</span>
+                    <span id="user-display-name">Mustafa</span>
+                </div>
+                <div class="avatar-wrapper">
+                    <img id="user-avatar-img" src="https://ui-avatars.com/api/?name=Mustafa&background=2563eb&color=fff" alt="صورة العميل" class="avatar-img">
+                    <div class="avatar-upload-icon"><ion-icon name="camera"></ion-icon></div>
+                </div>
+            </div>
+        </header>
+
+        <main class="content">
+            <!-- كارت سيولة المنصة الرئيسي -->
+            <div class="wallet-card">
+                <div class="wallet-top">
+                    <span>سيولة المنصة المتاحة حالياً</span>
+                    <button class="eye-btn" onclick="toggleBalance()"><ion-icon id="eye-icon" name="eye-outline"></ion-icon></button>
+                </div>
+                <div class="wallet-balance">
+                    <h2 id="usdt-balance"><small>USDT</small> 15,000.00</h2>
+                    <p id="sdg-balance">≈ SDG 29,400,000</p>
+                </div>
+            </div>
+
+            <!-- 🌟 الإعلان العصري والمستهدف تحت مستطيل السيولة 🌟 -->
+            <div class="promo-banner" onclick="openChatWithContext('عرض الخصم الخاص للمبالغ الكبيرة')">
+                <div class="promo-content">
+                    <div class="promo-tag">
+                        <ion-icon name="flash"></ion-icon>
+                        <span>خصم 10%</span>
+                    </div>
+                    <div class="promo-text">
+                        <h4>عرض المبالغ الكبيرة 🔥</h4>
+                        <p>احصل على خصم 10% لمعاملات البيع والشراء من <strong>1000 USDT</strong> وما فوق.</p>
+                    </div>
+                </div>
+                <div class="promo-arrow">
+                    <ion-icon name="chevron-back-outline"></ion-icon>
+                </div>
+            </div>
+
+            <!-- شريط أسعار الصرف التفاعلي -->
+            <div class="interactive-rates">
+                <div class="rate-card sell-card" onclick="rateCardClick('بيع')">
+                    <ion-icon name="trending-down-outline" class="rate-icon red"></ion-icon>
+                    <div class="rate-info">
+                        <span class="rate-label">بيع USDT</span>
+                        <strong class="rate-val red">SDG 1,940</strong>
+                    </div>
+                    <div class="rate-status-dot red-dot"></div>
+                </div>
+
+                <div class="rate-card buy-card" onclick="rateCardClick('شراء')">
+                    <ion-icon name="trending-up-outline" class="rate-icon green"></ion-icon>
+                    <div class="rate-info">
+                        <span class="rate-label">شراء USDT</span>
+                        <strong class="rate-val green">SDG 1,960</strong>
+                    </div>
+                    <div class="rate-status-dot green-dot"></div>
+                </div>
+            </div>
+
+            <!-- قسم الاستثمار -->
+            <div class="section-title">
+                <ion-icon name="trending-up-outline" class="modern-header-icon invest-icon"></ion-icon>
+                <h3>خطط الاستثمار</h3>
+            </div>
+            
+            <div class="invest-grid">
+                <div class="invest-card gold" onclick="openChatWithContext('استثمار سنوي')">
+                    <div class="invest-head">
+                        <h4>استثمار سنوي</h4>
+                        <span class="rate-badge gold-bg">25% / سنوياً</span>
+                    </div>
+                    <p>أعلى عائد استثماري آمن لمبالغك.</p>
+                    <button class="btn-sub gold-btn">تحدث مع المشرف 💬</button>
+                </div>
+
+                <div class="invest-card" onclick="openChatWithContext('استثمار شهري')">
+                    <div class="invest-head">
+                        <h4>استثمار شهري</h4>
+                        <span class="rate-badge">12% / شهرياً</span>
+                    </div>
+                    <p>أرباح شهرية ثابتة وسحب عند الانتهاء.</p>
+                    <button class="btn-sub">تحدث مع المشرف 💬</button>
+                </div>
+            </div>
+
+            <!-- الخدمات المالية المباشرة -->
+            <div class="section-title">
+                <ion-icon name="flash-outline" class="modern-header-icon flash-icon"></ion-icon>
+                <h3>الخدمات المباشرة</h3>
+            </div>
+
+            <div class="services-grid">
+                <div class="service-card paypal" onclick="openChatWithContext('فتح حساب PayPal')">
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                    <div class="s-info">
+                        <h4>فتح حساب بايبال</h4>
+                        <p>تفعيل حساب PayPal جاهز للاستلام والسحب</p>
+                    </div>
+                    <div class="s-icon"><ion-icon name="logo-paypal"></ion-icon></div>
+                </div>
+
+                <div class="service-card exness" onclick="openChatWithContext('فتح حساب Exness')">
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                    <div class="s-info">
+                        <h4>فتح حساب إكسنيس</h4>
+                        <p>إنشاء وتوثيق حساب للتداول في Exness</p>
+                    </div>
+                    <div class="s-icon"><ion-icon name="trending-up-outline"></ion-icon></div>
+                </div>
+
+                <div class="service-card card-visa" onclick="openChatWithContext('إنشاء فيزا افتراضية')">
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                    <div class="s-info">
+                        <h4>إنشاء فيزا افتراضية</h4>
+                        <p>بطاقة Mastercard / Visa جاهزة للشراء والتسوق عبر الإنترنت</p>
+                    </div>
+                    <div class="s-icon"><ion-icon name="card-outline"></ion-icon></div>
+                </div>
+
+                <div class="service-card games" onclick="openChatWithContext('دفع اشتراكات الألعاب')">
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                    <div class="s-info">
+                        <h4>دفع اشتراكات الألعاب</h4>
+                        <p>شحن النقاط والباقات في الألعاب والتطبيقات المباشرة</p>
+                    </div>
+                    <div class="s-icon"><ion-icon name="game-controller-outline"></ion-icon></div>
+                </div>
+
+                <div class="service-card bank-issues" onclick="openChatWithContext('حل مشاكل الحسابات البنكية')">
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                    <div class="s-info">
+                        <h4>حل مشاكل الحسابات البنكية</h4>
+                        <p>مساعدة واستشارات لتسوية مشاكل المعاملات والحسابات</p>
+                    </div>
+                    <div class="s-icon"><ion-icon name="build-outline"></ion-icon></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- نافذة بيانات العميل (Modal) -->
+    <div id="profile-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <button class="close-modal" onclick="closeProfileModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="modal-avatar-area">
+                <img id="modal-user-img" src="https://ui-avatars.com/api/?name=Mustafa&background=2563eb&color=fff" alt="صورة العميل">
+                <label for="change-avatar-input" class="change-photo-btn">
+                    <ion-icon name="camera-outline"></ion-icon> تغيير الصورة
+                </label>
+                <input type="file" id="change-avatar-input" accept="image/*" class="hidden" onchange="uploadAvatar(event)">
+            </div>
+            
+            <h3 id="modal-user-name" class="modal-title">Mustafa</h3>
+            <span class="modal-phone" id="modal-user-phone">09xxxxxxx</span>
+
+            <div class="user-stats">
+                <div class="stat-item">
+                    <span>حالة الحساب</span>
+                    <strong>موثق ✅</strong>
+                </div>
+                <div class="stat-item">
+                    <span>تاريخ الانضمام</span>
+                    <strong id="modal-user-date">أغسطس 2026</strong>
+                </div>
+            </div>
+
+            <div class="subscriptions-section">
+                <h4>خطط الاستثمار المشترك فيها:</h4>
+                <div id="active-subscriptions" class="subscriptions-list">
+                    <div class="sub-item gold-sub">
+                        <ion-icon name="ribbon-outline"></ion-icon>
+                        <div>
+                            <strong>استثمار سنوي (نشط)</strong>
+                            <small>العائد: 25% سنوياً</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- شاشة المحادثة المباشرة -->
+    <div id="chat-screen" class="screen">
+        <div class="chat-header">
+            <button onclick="navigateTo('app-screen')" class="back-btn"><ion-icon name="arrow-forward-outline"></ion-icon></button>
+            <div class="chat-title">
+                <h3 id="chat-service-title">المحادثة المباشرة</h3>
+                <span class="online-status">🟢 المشرف متصل الآن</span>
+            </div>
+        </div>
+
+        <div class="chat-body">
+            <div id="chat-messages" class="messages-container"></div>
+
+            <div class="chat-footer">
+                <label for="chat-file" class="attach-icon">
+                    <ion-icon name="image-outline"></ion-icon>
+                </label>
+                <input type="file" id="chat-file" accept="image/*" class="hidden" onchange="sendImageMessage(event)">
+
+                <input type="text" id="chat-input-text" placeholder="اكتب رسالتك هنا..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendTextMessage()" class="btn-send-msg">
+                    <ion-icon name="send-outline"></ion-icon>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

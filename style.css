@@ -1,0 +1,574 @@
+/* ==========================================
+   1. متغيرات الألوان للوضع الداكن والفاتح
+   ========================================== */
+:root[data-theme="dark"] {
+    --bg-main: #030712;
+    --bg-screen: #0b0f19;
+    --card-bg: #111827;
+    --card-border: #1f2937;
+    --text-primary: #f9fafb;
+    --text-secondary: #9ca3af;
+    --wallet-bg: linear-gradient(135deg, #1e293b, #0f172a);
+    --btn-icon-bg: #1f2937;
+    --btn-icon-color: #9ca3af;
+    --modal-overlay: rgba(0, 0, 0, 0.75);
+    --promo-bg: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(147, 51, 234, 0.15));
+    --promo-border: rgba(59, 130, 246, 0.3);
+}
+
+:root[data-theme="light"] {
+    --bg-main: #f1f5f9;
+    --bg-screen: #f8fafc;
+    --card-bg: #ffffff;
+    --card-border: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --wallet-bg: linear-gradient(135deg, #dbeafe, #eff6ff);
+    --btn-icon-bg: #e2e8f0;
+    --btn-icon-color: #334155;
+    --modal-overlay: rgba(15, 23, 42, 0.4);
+    --promo-bg: linear-gradient(135deg, #eff6ff, #f3e8ff);
+    --promo-border: #c084fc;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    direction: rtl;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+}
+
+.screen {
+    display: none;
+    width: 100%;
+    max-width: 440px;
+    min-height: 100vh;
+    background-color: var(--bg-screen);
+    padding: 16px;
+}
+
+.screen.active {
+    display: block;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ==========================================
+   2. الهيدر والوضع الفاتح/الداكن
+   ========================================== */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.header-right {
+    display: flex;
+    gap: 8px;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.avatar-wrapper {
+    position: relative;
+    width: 44px;
+    height: 44px;
+}
+
+.avatar-img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #2563eb;
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.3);
+}
+
+.avatar-upload-icon {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    background: #2563eb;
+    color: white;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+}
+
+.user-details {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#user-display-name {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.badge-verified {
+    font-size: 11px;
+    color: #0284c7;
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    padding: 2px 8px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-weight: 600;
+}
+
+.icon-btn {
+    background: var(--btn-icon-bg);
+    border: none;
+    color: var(--btn-icon-color);
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logout-color {
+    color: #ef4444;
+}
+
+/* ==========================================
+   3. كارت السيولة وتصميم الإعلان العصري
+   ========================================== */
+.wallet-card {
+    background: var(--wallet-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 18px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.wallet-top {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.eye-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.wallet-balance {
+    margin-top: 10px;
+}
+
+.wallet-balance h2 {
+    font-size: 26px;
+    font-weight: 800;
+}
+
+.wallet-balance small {
+    font-size: 15px;
+    color: #0284c7;
+}
+
+.wallet-balance p {
+    color: var(--text-secondary);
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+/* تصميم كارت الإعلان الجديد */
+.promo-banner {
+    background: var(--promo-bg);
+    border: 1px dashed var(--promo-border);
+    border-radius: 16px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    transition: transform 0.2s ease;
+}
+
+.promo-banner:active {
+    transform: scale(0.98);
+}
+
+.promo-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.promo-tag {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+}
+
+.promo-tag ion-icon {
+    font-size: 14px;
+}
+
+.promo-text h4 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.promo-text p {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.3;
+}
+
+.promo-text strong {
+    color: #2563eb;
+}
+
+.promo-arrow {
+    color: var(--text-secondary);
+    font-size: 18px;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.section-title h3 {
+    font-size: 15px;
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+.modern-header-icon {
+    font-size: 18px;
+    padding: 6px;
+    border-radius: 10px;
+}
+
+.invest-icon {
+    background: rgba(217, 119, 6, 0.15);
+    color: #d97706;
+}
+
+.flash-icon {
+    background: rgba(234, 179, 8, 0.15);
+    color: #eab308;
+}
+
+/* ==========================================
+   4. كروت أسعار الصرف والخدمات
+   ========================================== */
+.interactive-rates {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.rate-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.rate-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.green-dot { background: #10b981; box-shadow: 0 0 6px #10b981; }
+.red-dot { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+
+.rate-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.rate-label {
+    font-size: 10px;
+    color: var(--text-secondary);
+}
+
+.rate-val {
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.green { color: #10b981; }
+.red { color: #f87171; }
+
+.invest-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 22px;
+}
+
+.invest-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 14px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.invest-card.gold {
+    border-color: #d97706;
+}
+
+.invest-head h4 {
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.rate-badge {
+    background: #065f46;
+    color: #34d399;
+    font-size: 10px;
+    padding: 3px 6px;
+    border-radius: 8px;
+    display: inline-block;
+    margin-bottom: 8px;
+}
+
+.rate-badge.gold-bg {
+    background: #78350f;
+    color: #fbbf24;
+}
+
+.invest-card p {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.btn-sub {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: bold;
+    width: 100%;
+}
+
+.gold-btn {
+    background: linear-gradient(135deg, #d97706, #b45309);
+}
+
+.services-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.service-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.s-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.paypal .s-icon { background: rgba(0, 112, 186, 0.15); color: #0070ba; }
+.exness .s-icon { background: rgba(217, 119, 6, 0.15); color: #d97706; }
+.card-visa .s-icon { background: rgba(37, 99, 235, 0.15); color: #2563eb; }
+.games .s-icon { background: rgba(147, 51, 234, 0.15); color: #9333ea; }
+.bank-issues .s-icon { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+
+.s-info { flex: 1; }
+.s-info h4 { font-size: 14px; margin-bottom: 2px; }
+.s-info p { font-size: 11px; color: var(--text-secondary); }
+.arrow { color: var(--text-secondary); font-size: 18px; }
+
+/* ==========================================
+   5. النافذة المنبثقة والشات وتنسيق تسجيل الدخول
+   ========================================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--modal-overlay);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 16px;
+}
+
+.modal-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 24px;
+    width: 100%;
+    max-width: 380px;
+    text-align: center;
+    position: relative;
+}
+
+.close-modal {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    background: var(--btn-icon-bg);
+    border: none;
+    color: var(--text-secondary);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+#modal-user-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #2563eb;
+    margin-bottom: 8px;
+}
+
+.change-photo-btn { font-size: 11px; color: #38bdf8; cursor: pointer; }
+.modal-title { font-size: 18px; margin-bottom: 2px; }
+.modal-phone { font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 16px; }
+
+.user-stats {
+    display: flex;
+    justify-content: space-around;
+    background: var(--btn-icon-bg);
+    padding: 10px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+}
+
+.stat-item span { display: block; font-size: 10px; color: var(--text-secondary); }
+.stat-item strong { font-size: 12px; }
+
+.subscriptions-section { text-align: right; }
+.subscriptions-section h4 { font-size: 12px; margin-bottom: 8px; }
+
+.sub-item {
+    background: var(--btn-icon-bg);
+    padding: 10px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+}
+
+/* شاشة المحادثة */
+.chat-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--card-border);
+    margin-bottom: 12px;
+}
+
+.back-btn { background: none; border: none; color: var(--text-primary); font-size: 22px; cursor: pointer; }
+.online-status { font-size: 11px; color: #10b981; }
+.chat-body { display: flex; flex-direction: column; height: 82vh; }
+.messages-container { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+
+.msg-box { max-width: 82%; padding: 10px 14px; border-radius: 14px; font-size: 13px; }
+.msg-box.admin { background: var(--btn-icon-bg); color: var(--text-primary); align-self: flex-start; }
+.msg-box.user { background: #2563eb; color: white; align-self: flex-end; }
+.msg-img { max-width: 100%; border-radius: 10px; margin-top: 5px; }
+
+.chat-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card-bg);
+    padding: 8px;
+    border-radius: 14px;
+    border: 1px solid var(--card-border);
+}
+
+.attach-icon { font-size: 24px; color: var(--text-secondary); cursor: pointer; padding: 4px; }
+.chat-footer input[type="text"] { flex: 1; background: none; border: none; color: var(--text-primary); outline: none; padding: 8px; font-size: 13px; }
+.btn-send-msg { background: #2563eb; border: none; color: white; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; }
+
+/* تنسيق شاشة الدخول */
+.auth-box { text-align: center; margin-top: 60px; }
+.logo-title { font-size: 32px; color: #2563eb; margin-bottom: 6px; font-weight: 800; }
+.subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 25px; }
+input { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--card-bg); color: var(--text-primary); outline: none; }
+.btn-primary { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }

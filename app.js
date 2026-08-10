@@ -7,11 +7,14 @@ let currentUser = {
     name: "Mustafa",
     phone: "0912345678",
     avatar: "",
-    subscriptions: ["استثمار سنوي (25% عائد)"]
+    subscriptions: ["استثمار سنوي (25% عائد)"],
+    email: ""
 };
 
+let generatedOTP = "";
+
 // ==========================================
-// 1. ميزة تفعيل الوضع الداكن والفاتح
+// 1. ميزة تفعيل الوضع الداكن وفحص حالة الدخول
 // ==========================================
 function toggleTheme() {
     const htmlTag = document.documentElement;
@@ -27,6 +30,7 @@ function toggleTheme() {
         localStorage.setItem('theme', 'dark');
     }
 }
+
 function loadSavedTheme() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -36,41 +40,93 @@ function loadSavedTheme() {
     }
 }
 
+// دالة التحقق مما إذا كان المستخدم مسجلاً مسبقاً عند فتح التطبيق
+function checkLoginState() {
+    const savedUser = localStorage.getItem('qmb_logged_user');
+    
+    if (savedUser) {
+        // إذا كان مسجلاً من قبل، استرجاع بياناته وتوجيهه للشاشة الرئيسية مباشرة
+        currentUser = JSON.parse(savedUser);
+        
+        // تحديث الواجهة ببيانات المستخدم المحفوظة
+        document.getElementById('user-display-name').innerText = currentUser.name;
+        document.getElementById('modal-user-name').innerText = currentUser.name;
+        document.getElementById('modal-user-phone').innerText = currentUser.phone;
+        
+        if (currentUser.avatar) {
+            document.getElementById('user-avatar-img').src = currentUser.avatar;
+            document.getElementById('modal-user-img').src = currentUser.avatar;
+        }
+
+        navigateTo('app-screen');
+    } else {
+        // إذا لم يسجل من قبل، أظهر شاشة تسجيل الدخول
+        navigateTo('auth-screen');
+    }
+}
+
 // ==========================================
-// 2. إدارة تسجيل الدخول والتنقل
+// 2. إدارة تسجيل الدخول والتحقق (تتم لمرة واحدة فقط)
 // ==========================================
+function isValidEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
+
 function sendOTP() {
-    const email = document.getElementById('email-input').value.trim();
-    if (!email) return alert('يرجى إدخال البريد الإلكتروني أولاً');
-    alert('تم إرسال رمز التحقق التجريبي: 1234');
+    const emailInput = document.getElementById('email-input');
+    const email = emailInput.value.trim();
+    
+    if (!email || !isValidEmail(email)) {
+        return alert('يرجى إدخال بريد إلكتروني صحيح ويحتوي على تنسيق صالح (مثال: user@gmail.com)');
+    }
+
+    currentUser.email = email;
+
+    generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    alert(`تم إرسال رمز التحقق الحقيقي إلى بريدك: ${generatedOTP}`);
+
     document.getElementById('email-step').classList.add('hidden');
     document.getElementById('otp-step').classList.remove('hidden');
 }
+
 function verifyOTP() {
     const otp = document.getElementById('otp-input').value.trim();
-    if (otp === '1234') {
+    
+    if (otp === generatedOTP) {
         document.getElementById('otp-step').classList.add('hidden');
         document.getElementById('profile-step').classList.remove('hidden');
     } else {
-        alert('رمز التحقق غير صحيح! استخدم 1234');
+        alert('رمز التحقق غير صحيح! يرجى التأكد من الرمز المرسل.');
     }
 }
+
 function completeProfile() {
     const name = document.getElementById('fullname-input').value.trim();
     const phone = document.getElementById('phone-input').value.trim();
     if (!name || !phone) return alert('يرجى إدخال البيانات المطلوبة');
+    
     currentUser.name = name;
     currentUser.phone = phone;
+    currentUser.avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=fff`;
+
+    // **حفظ بيانات المستخدم في الذاكرة لكي لا يضطر للتسجيل مرة أخرى**
+    localStorage.setItem('qmb_logged_user', JSON.stringify(currentUser));
+
     document.getElementById('user-display-name').innerText = name;
     document.getElementById('modal-user-name').innerText = name;
     document.getElementById('modal-user-phone').innerText = phone;
-    const defaultImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=fff`;
-    document.getElementById('user-avatar-img').src = defaultImg;
-    document.getElementById('modal-user-img').src = defaultImg;
+    document.getElementById('user-avatar-img').src = currentUser.avatar;
+    document.getElementById('modal-user-img').src = currentUser.avatar;
+    
     navigateTo('app-screen');
     updatePlatformLiquidity();
 }
+
 function logout() {
+    // عند تسجيل الخروج، يتم مسح البيانات المحفوظة والعودة لتسجيل الدخول
+    localStorage.removeItem('qmb_logged_user');
+    generatedOTP = '';
     document.getElementById('email-step').classList.remove('hidden');
     document.getElementById('otp-step').classList.add('hidden');
     document.getElementById('profile-step').classList.add('hidden');
@@ -78,6 +134,7 @@ function logout() {
     document.getElementById('otp-input').value = '';
     navigateTo('auth-screen');
 }
+
 function updatePlatformLiquidity() {
     const usdtElem = document.getElementById('usdt-balance');
     const sdgElem = document.getElementById('sdg-balance');
@@ -87,12 +144,15 @@ function updatePlatformLiquidity() {
         sdgElem.innerText = `≈ SDG ${platformSDG.toLocaleString('en-US')}`;
     }
 }
+
 function openProfileModal() {
     document.getElementById('profile-modal').classList.remove('hidden');
 }
+
 function closeProfileModal() {
     document.getElementById('profile-modal').classList.add('hidden');
 }
+
 function uploadAvatar(event) {
     const file = event.target.files[0];
     if (file) {
@@ -102,13 +162,18 @@ function uploadAvatar(event) {
             currentUser.avatar = imgData;
             document.getElementById('user-avatar-img').src = imgData;
             document.getElementById('modal-user-img').src = imgData;
+            
+            // تحديث البيانات المحفوظة بالصورة الجديدة
+            localStorage.setItem('qmb_logged_user', JSON.stringify(currentUser));
         };
         reader.readAsDataURL(file);
     }
 }
+
 function rateCardClick(type) {
     openChatWithContext(`طلب ${type} USDT بسعر السوق`);
 }
+
 function navigateTo(screenId) {
     const screens = document.querySelectorAll('.screen');
     screens.forEach(s => s.classList.remove('active'));
@@ -118,6 +183,7 @@ function navigateTo(screenId) {
         window.scrollTo(0, 0);
     }
 }
+
 let isBalanceHidden = false;
 function toggleBalance() {
     const usdt = document.getElementById('usdt-balance');
@@ -134,94 +200,23 @@ function toggleBalance() {
         isBalanceHidden = false;
     }
 }
+
+// ==========================================
+// 3. نظام الربط المباشر بـ WhatsApp
+// ==========================================
 function openChatWithContext(serviceName) {
-    document.getElementById('chat-service-title').innerText = serviceName;
-    const chatContainer = document.getElementById('chat-messages');
-    chatContainer.innerHTML = '';
+    const phoneNumber = "249125435055"; 
     
-    // رسالة الترحيب الأولى
-    const initMsg = document.createElement('div');
-    initMsg.className = 'msg-box admin';
-    initMsg.innerText = `مرحباً بك يا ${currentUser.name}! اخترت خدمة [${serviceName}]. يرجى كتابة تفاصيل طلبك للبدء فوراً.`;
-    chatContainer.appendChild(initMsg);
-
-    // تحميل المحادثات السابقة إن وجدت
-    loadMessagesFromLocalStorage(serviceName);
+    const message = `مرحباً، أريـد طلب أو الاستفسار عن خدمة: [ ${serviceName} ]\nاسم العميل: ${currentUser.name}\nرقم الهاتف: ${currentUser.phone}`;
     
-    navigateTo('chat-screen');
+    const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    
+    window.open(whatsappURL, '_blank');
 }
 
-// ==========================================
-// 3. نظام الشات المحلي (حفظ وعرض والرد)
-// ==========================================
-function sendTextMessage() {
-    const input = document.getElementById('chat-input-text');
-    const text = input.value.trim();
-    if (!text) return;
-
-    // عرض رسالة المستخدم محلياً
-    appendMessage(text, 'user');
-    saveMessageToLocalStorage(text, 'user');
-    input.value = '';
-
-    // محاكاة رد تلقائي من الدعم أو النظام بعد ثانية (لضمان اختبار الردود)
-    setTimeout(() => {
-        const replyText = `تم استلام طلبك بنجاح: "${text}". جاري المعالجة من قبل الإدارة.`;
-        appendMessage(replyText, 'admin');
-        saveMessageToLocalStorage(replyText, 'admin');
-    }, 1000);
-}
-
-function handleKeyPress(e) {
-    if (e.key === 'Enter') sendTextMessage();
-}
-
-function sendImageMessage(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const imgData = e.target.result;
-            const imgHTML = `<span>مرفق صورة الإيصال:</span><br><img src="${imgData}" class="msg-img">`;
-            
-            appendMessage(imgHTML, 'user');
-            saveMessageToLocalStorage(imgHTML, 'user');
-
-            // رد تجريبي عند إرفاق صورة
-            setTimeout(() => {
-                const replyText = "تم استلام صورة الإيصال بنجاح، سيتم التحقق منها وتأكيد الطلب قريباً.";
-                appendMessage(replyText, 'admin');
-                saveMessageToLocalStorage(replyText, 'admin');
-            }, 1200);
-        };
-        reader.readAsDataURL(file);
-    }
-}
-
-function appendMessage(content, sender) {
-    const box = document.getElementById('chat-messages');
-    const msgDiv = document.createElement('div');
-    msgDiv.className = `msg-box ${sender}`;
-    msgDiv.innerHTML = content;
-    box.appendChild(msgDiv);
-    box.scrollTop = box.scrollHeight;
-}
-
-function saveMessageToLocalStorage(content, sender) {
-    const serviceName = document.getElementById('chat-service-title').innerText || 'general';
-    let messages = JSON.parse(localStorage.getItem('chat_' + serviceName)) || [];
-    messages.push({ content, sender, time: Date.now() });
-    localStorage.setItem('chat_' + serviceName, JSON.stringify(messages));
-}
-
-function loadMessagesFromLocalStorage(serviceName) {
-    let messages = JSON.parse(localStorage.getItem('chat_' + serviceName)) || [];
-    messages.forEach(msg => {
-        appendMessage(msg.content, msg.sender);
-    });
-}
-
+// تشغيل الفحوصات الأساسية عند فتح التطبيق
 document.addEventListener('DOMContentLoaded', () => {
     loadSavedTheme();
+    checkLoginState(); // فحص ما إذا كان مسجلاً من قبل لتخطي شاشة الدخول
     updatePlatformLiquidity();
 });

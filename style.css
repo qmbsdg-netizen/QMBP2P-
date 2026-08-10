@@ -48,8 +48,9 @@ body {
     justify-content: center;
 }
 
+/* تعديل هنا لضمان عدم بقاء الشاشات فارغة أو بيضاء */
 .screen {
-    display: none;
+    display: none !important;
     width: 100%;
     max-width: 440px;
     min-height: 100vh;
@@ -58,7 +59,7 @@ body {
 }
 
 .screen.active {
-    display: block;
+    display: block !important;
 }
 
 .hidden {

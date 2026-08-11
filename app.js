@@ -400,9 +400,8 @@ function submitPaymentReceipt(planType, amount) {
     updateUIProfile();
     closePaymentModal();
 
-    const phoneNumber = "249125435055";
     const message = `مرحباً، لقد قمت بالدفع وإرسال إيصال لخطـة الاستثمار:\nالخطة: [ ${planType} ]\nالمبلغ: ${amount} USDT\nاسم العميل: ${currentUser.name}\nرقم الهاتف: ${currentUser.phone}`;
-    const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    const whatsappURL = `https://wa.me/249904252568?text=${encodeURIComponent(message)}`;
     
     window.open(whatsappURL, '_blank');
     showToast("تم تسجيل طلب اشتراكك وتوجيهك لتأكيد الإيصال!");
@@ -476,9 +475,8 @@ function toggleBalance() {
 }
 
 function openChatWithContext(serviceName) {
-    const phoneNumber = "249125435055"; 
     const message = `مرحباً، أريـد طلب أو الاستفسار عن خدمة: [ ${serviceName} ]\nاسم العميل: ${currentUser.name}\nرقم الهاتف: ${currentUser.phone}`;
-    const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    const whatsappURL = `https://wa.me/249904252568?text=${encodeURIComponent(message)}`;
     window.open(whatsappURL, '_blank');
 }
 

@@ -577,37 +577,30 @@
         </div>
     </div>
 
-    <!-- نافذة إكمال التحقق -->
+    <!-- نافذة إكمال التحقق (محدثة لرفع الملفات من الجهاز مباشرة بدلاً من الكاميرا) -->
     <div id="verification-modal" class="modal-overlay hidden">
         <div class="modal-card verify-modal-3d">
             <button class="close-modal" onclick="closeVerificationModal()"><ion-icon name="close"></ion-icon></button>
             <div class="amount-modal-header">
                 <div class="modal-icon-badge">
-                    <ion-icon name="camera-reverse-outline"></ion-icon>
+                    <ion-icon name="cloud-upload-outline"></ion-icon>
                 </div>
                 <h3>توثيق الهوية (KYC)</h3>
-                <p>اضغط أدناه للسماح وتشغيل الكاميرا للتحقق الفوري</p>
+                <p>اختر صورة مستندك الرسمي أو صورتك الشخصية للتحقق الفوري</p>
             </div>
 
             <div class="kyc-warning-box">
                 تحذير. الرجاء التأكد من رفع مستندك الرسمي الصحيح لعدم حصول مشاكل في الحساب
             </div>
 
-            <div id="camera-container-box" class="hidden" style="margin-bottom: 15px; position: relative; border-radius: 12px; overflow: hidden; background: #000;">
-                <video id="camera-video-stream" autoplay playsinline style="width: 100%; height: 200px; object-fit: cover; display: block;"></video>
-                <button onclick="capturePhotoFromStreamAndShowSuccess()" class="btn-primary" style="margin-top: 8px; background: #10b981;">التقاط الصورة الآن</button>
-            </div>
+            <!-- زر اختيار ورفع الصورة من الجهاز مباشرة -->
+            <label for="kyc-file-upload-input" class="btn-primary-3d" style="margin-bottom: 10px; background: linear-gradient(135deg, #2563eb, #1d4ed8); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 14px; border-radius: 12px; font-weight: bold;">
+                <ion-icon name="image-outline" style="font-size: 20px;"></ion-icon>
+                <span>رفع صورة التحقق من الجهاز</span>
+            </label>
+            <input type="file" id="kyc-file-upload-input" accept="image/*" style="display: none;" onchange="handleKycFileUpload(event)">
 
-            <button id="open-cam-trigger-btn" onclick="requestCameraAccess()" class="btn-primary-3d" style="margin-bottom: 10px;">
-                <ion-icon name="camera-outline"></ion-icon>
-                <span>السماح لتشغيل الكاميرا</span>
-            </button>
-
-            <div id="camera-error-hint" class="hidden" style="color: #dc2626; font-size: 11px; background: #fee2e2; padding: 8px; border-radius: 8px; margin-bottom: 10px; line-height: 1.4;">
-                ⚠️ الكاميرا محظورة من المتصفح. يرجى الضغط على رمز القفل 🔒 بشريط عنوان المتصفح وتفعيل الكاميرا.
-            </div>
-
-            <button onclick="closeVerificationModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px;">إغلاق</button>
+            <button onclick="closeVerificationModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 5px;">إغلاق</button>
         </div>
     </div>
 
@@ -817,25 +810,9 @@
             }
         }
 
-        async function requestCameraAccess() {
-            const errorHint = document.getElementById('camera-error-hint');
-            const cameraBox = document.getElementById('camera-container-box');
-            const video = document.getElementById('camera-video-stream');
-            
-            if (errorHint) errorHint.classList.add('hidden');
-
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment" } 
-                });
-
-                if (video) {
-                    video.srcObject = stream;
-                    cameraBox.classList.remove('hidden');
-                }
-            } catch (err) {
-                console.error("Camera denied or unavailable:", err);
-                if (errorHint) errorHint.classList.remove('hidden');
+        function handleKycFileUpload(event) {
+            if (event.target.files && event.target.files[0]) {
+                showSuccess3DModal();
             }
         }
 
@@ -851,13 +828,6 @@
             document.getElementById('successOverlay').classList.remove('active');
             const activeModals = document.querySelectorAll('.modal-overlay');
             activeModals.forEach(modal => modal.classList.add('hidden'));
-        }
-
-        function capturePhotoFromStreamAndShowSuccess() {
-            if (typeof window.capturePhotoFromStream === 'function') {
-                window.capturePhotoFromStream();
-            }
-            showSuccess3DModal();
         }
     </script>
 </body>

@@ -114,7 +114,7 @@ function updateUIProfile() {
             verifyContainer.innerHTML = `<p style="color: #10b981; font-weight: bold; text-align: center; font-size: 13px;">✔ الحساب موثق بنجاح</p>`;
         } else {
             verifyContainer.innerHTML = `
-                <button onclick="openVerificationModal()" class="btn-primary" style="background-color: #d97706; margin-top: 10px;">إكمال التحقق والكاميرا</button>
+                <button onclick="openVerificationModal()" class="btn-primary" style="background-color: #d97706; margin-top: 10px;">إكمال التحقق ورفع الصورة</button>
             `;
         }
     }
@@ -138,7 +138,7 @@ function updateUIProfile() {
 }
 
 // ==========================================
-// 2. نظام تشغيل الكاميرا من داخل التطبيق بشكل احترافي
+// 2. نظام رفع صورة التحقق من الجهاز
 // ==========================================
 function openVerificationModal() {
     if (currentUser.isVerified) {
@@ -153,32 +153,23 @@ function closeVerificationModal() {
 }
 
 async function triggerAppCamera() {
-    const videoElem = document.getElementById('camera-video-stream');
-    const containerBox = document.getElementById('camera-container-box');
-    const triggerBtn = document.getElementById('open-cam-trigger-btn');
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showToast("متصفحك لا يدعم تشغيل الكاميرا مباشرة، يرجى استخدام متصفح حديث", "error");
-        return;
+    // فتح نافذة اختيار ملفات الصور من الجهاز مباشرة بدلاً من تشغيل الكاميرا
+    let fileInput = document.getElementById('verification-file-input');
+    if (!fileInput) {
+        fileInput = document.createElement('input');
+        fileInput.id = 'verification-file-input';
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.style.display = 'none';
+        fileInput.onchange = function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                capturePhotoFromStream();
+            }
+        };
+        document.body.appendChild(fileInput);
     }
-
-    try {
-        activeCameraStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: 'environment' }, 
-            audio: false 
-        });
-        videoElem.srcObject = activeCameraStream;
-        containerBox.classList.remove('hidden');
-        triggerBtn.classList.add('hidden');
-        showToast("تم فتح الكاميرا بنجاح، يرجى السماح بالصلاحيات إذا طُلب منك", "info");
-    } catch (err) {
-        console.error("Camera Error:", err);
-        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-            showToast("يجب تشغيل التطبيق عبر رابط آمن HTTPS أو Localhost لكي تعمل الكاميرا", "error");
-        } else {
-            showToast("تم رفض إذن الكاميرا أو حدث خطأ، يرجى السماح بالصلاحيات من المتصفح", "error");
-        }
-    }
+    fileInput.click();
 }
 
 function stopAppCamera() {
@@ -198,7 +189,7 @@ function capturePhotoFromStream() {
     localStorage.setItem('qmb_logged_user', JSON.stringify(currentUser));
     updateUIProfile();
     closeVerificationModal();
-    showToast("🎉 مبروك! تم التقاط صورة التحقق وتوثيق حسابك بنجاح.");
+    showToast("🎉 مبروك! تم رفع صورة التحقق وتوثيق حسابك بنجاح.");
 }
 
 // ==========================================
@@ -220,14 +211,12 @@ function sendOTP() {
     currentUser.email = email;
     generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // استدعاء الدالة الجديدة ليبقى الرمز ظاهراً حتى يتم الضغط على موافق
     showPersistentOtpToast(generatedOTP);
 
     document.getElementById('email-step').classList.add('hidden');
     document.getElementById('otp-step').classList.remove('hidden');
 }
 
-// دالة عرض رمز التحقق الثابت مع زر موافق
 function showPersistentOtpToast(otpCode) {
     const container = document.getElementById('toast-container');
     if (!container) return;

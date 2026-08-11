@@ -5,14 +5,251 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QMB P2P & Financial Services</title>
     <link rel="stylesheet" href="style.css">
-    <!-- مكتبة Appwrite -->
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.0"></script>
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <style>
+        .success-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+
+        .success-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .success-card-3d {
+            background: var(--card-bg, #ffffff);
+            width: 85%;
+            max-width: 340px;
+            padding: 30px 20px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 
+                        0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+            transform: translateY(20px) scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .success-overlay.active .success-card-3d {
+            transform: translateY(0) scale(1);
+        }
+
+        .success-icon-3d {
+            width: 65px;
+            height: 65px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            margin: 0 auto 18px;
+            box-shadow: 0 8px 16px rgba(16, 185, 129, 0.35);
+        }
+
+        .success-card-3d h3 {
+            color: var(--text-main, #111827);
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .success-card-3d p {
+            color: var(--text-secondary, #6b7280);
+            font-size: 14px;
+            margin-bottom: 22px;
+            line-height: 1.5;
+        }
+
+        .btn-home {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 13px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 6px 15px rgba(37, 99, 235, 0.3);
+            transition: transform 0.1s;
+        }
+
+        .btn-home:active {
+            transform: scale(0.98);
+        }
+
+        .kyc-warning-box {
+            background-color: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fef3c7;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .action-container-3d {
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        .btn-small-3d-sell {
+            background: linear-gradient(135deg, #ffffff, #fef2f2);
+            color: #dc2626;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15), 
+                        0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 100%;
+        }
+
+        .btn-small-3d-sell:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-small-3d-buy {
+            background: linear-gradient(135deg, #ffffff, #f0fdf4);
+            color: #059669;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15), 
+                        0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 100%;
+        }
+
+        .btn-small-3d-buy:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+        }
+
+        .service-card .s-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1), inset 0 2px 3px rgba(255, 255, 255, 0.4);
+            transition: transform 0.2s ease;
+        }
+        
+        .service-card:hover .s-icon {
+            transform: translateY(-2px) scale(1.05);
+        }
+
+        .service-card.paypal .s-icon { background: linear-gradient(135deg, #0079C1, #00457C); color: #ffffff; }
+        .service-card.exness .s-icon { background: linear-gradient(135deg, #FF5500, #CC3300); color: #ffffff; }
+        .service-card.card-visa .s-icon { background: linear-gradient(135deg, #1A1F71, #0056b3); color: #f79e1b; }
+        .service-card.games .s-icon { background: linear-gradient(135deg, #8B5CF6, #6D28D9); color: #ffffff; }
+        .service-card.bank-issues .s-icon { background: linear-gradient(135deg, #059669, #047857); color: #ffffff; }
+
+        .profile-modal-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 30px;
+            border-radius: 32px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            position: relative;
+        }
+
+        .modal-avatar-area {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 15px;
+        }
+
+        #modal-user-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #fff;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+
+        .change-photo-btn {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: #2563eb;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        .modal-title { font-size: 22px; font-weight: 800; margin: 10px 0 2px; color: #111827; }
+        .modal-phone { color: #6b7280; font-size: 14px; }
+
+        .user-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 25px 0;
+        }
+
+        .stat-box {
+            background: #f3f4f6;
+            padding: 15px 10px;
+            border-radius: 16px;
+        }
+
+        .stat-box span { display: block; font-size: 11px; color: #6b7280; margin-bottom: 5px; }
+        .stat-box strong { font-size: 14px; color: #111827; }
+    </style>
 </head>
 <body>
 
-    <!-- شاشة تسجيل الدخول (تم إضافة active هنا لتجنب الشاشة البيضاء تماماً) -->
+    <!-- شاشة تسجيل الدخول -->
     <div id="auth-screen" class="screen active">
         <div class="auth-box">
             <h1 class="logo-title">QMB P2P</h1>
@@ -24,7 +261,7 @@
             </div>
 
             <div id="otp-step" class="hidden">
-                <input type="number" id="otp-input" placeholder="أدخل رمز التحقق (1234)">
+                <input type="number" id="otp-input" placeholder="أدخل رمز التحقق المرسل">
                 <button onclick="verifyOTP()" class="btn-primary">تأكيد الرمز</button>
             </div>
 
@@ -40,17 +277,20 @@
     <div id="app-screen" class="screen">
         <header class="app-header">
             <div class="header-right">
-                <button onclick="logout()" class="icon-btn logout-color"><ion-icon name="log-out-outline"></ion-icon></button>
+                <button onclick="logout()" class="icon-btn logout-color" title="تسجيل الخروج"><ion-icon name="log-out-outline"></ion-icon></button>
                 <button onclick="toggleTheme()" class="icon-btn theme-btn" id="theme-toggle-btn">
                     <ion-icon name="moon-outline" id="theme-icon"></ion-icon>
                 </button>
             </div>
 
+            <div id="top-kyc-btn-wrapper">
+                <button id="top-verification-btn" class="binance-verify-pill" onclick="openVerificationModal()">
+                    <ion-icon name="shield-checkmark-outline"></ion-icon>
+                    <span id="top-verify-text">إكمال التحقق</span>
+                </button>
+            </div>
+
             <div class="user-profile" onclick="openProfileModal()">
-                <div class="user-details">
-                    <span class="badge-verified"><ion-icon name="checkmark-seal"></ion-icon> موثق</span>
-                    <span id="user-display-name">Mustafa</span>
-                </div>
                 <div class="avatar-wrapper">
                     <img id="user-avatar-img" src="https://ui-avatars.com/api/?name=Mustafa&background=2563eb&color=fff" alt="صورة العميل" class="avatar-img">
                     <div class="avatar-upload-icon"><ion-icon name="camera"></ion-icon></div>
@@ -59,20 +299,23 @@
         </header>
 
         <main class="content">
-            <!-- كارت سيولة المنصة الرئيسي -->
-            <div class="wallet-card">
+            <div class="wallet-card-3d-pro">
+                <div class="glow-orb-1"></div>
+                <div class="glow-orb-2"></div>
                 <div class="wallet-top">
-                    <span>سيولة المنصة المتاحة حالياً</span>
-                    <button class="eye-btn" onclick="toggleBalance()"><ion-icon id="eye-icon" name="eye-outline"></ion-icon></button>
+                    <span class="wallet-label-3d"><ion-icon name="wallet-outline"></ion-icon> سيولة المنصة المتاحة</span>
+                    <button class="eye-btn-3d" onclick="toggleBalance()"><ion-icon id="eye-icon" name="eye-outline"></ion-icon></button>
                 </div>
                 <div class="wallet-balance">
-                    <h2 id="usdt-balance"><small>USDT</small> 15,000.00</h2>
-                    <p id="sdg-balance">≈ SDG 29,400,000</p>
+                    <h2 id="usdt-balance"><small>USDT</small> 6,897,544.00</h2>
+                    <p id="sdg-balance">≈ SDG 41,730,141,200</p>
+                </div>
+                <div class="wallet-footer-info-clean">
+                    <span class="live-badge-pro"><ion-icon name="pulse-outline"></ion-icon> مباشر وحصري</span>
                 </div>
             </div>
 
-            <!-- 🌟 الإعلان العصري والمستهدف تحت مستطيل السيولة 🌟 -->
-            <div class="promo-banner" onclick="openChatWithContext('عرض الخصم الخاص للمبالغ الكبيرة')">
+            <div class="promo-banner" onclick="openBigAmountModal()">
                 <div class="promo-content">
                     <div class="promo-tag">
                         <ion-icon name="flash"></ion-icon>
@@ -88,54 +331,71 @@
                 </div>
             </div>
 
-            <!-- شريط أسعار الصرف التفاعلي -->
             <div class="interactive-rates">
-                <div class="rate-card sell-card" onclick="rateCardClick('بيع')">
-                    <ion-icon name="trending-down-outline" class="rate-icon red"></ion-icon>
-                    <div class="rate-info">
-                        <span class="rate-label">بيع USDT</span>
-                        <strong class="rate-val red">SDG 1,940</strong>
+                <div class="rate-card-wrapper" style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="rate-card buy-card" onclick="rateCardClick('شراء')">
+                        <div class="rate-icon-wrapper green-bg">
+                            <ion-icon name="trending-up-outline" class="rate-icon green"></ion-icon>
+                        </div>
+                        <div class="rate-info">
+                            <span class="rate-label">سعر شراء USDT</span>
+                            <strong class="rate-val green">SDG 6,050</strong>
+                        </div>
+                        <div class="rate-status-dot green-dot"></div>
                     </div>
-                    <div class="rate-status-dot red-dot"></div>
+                    <div class="action-container-3d">
+                        <button class="btn-small-3d-buy" onclick="openBuyModal()">
+                            <ion-icon name="cart-outline"></ion-icon>
+                            <span>شراء USDT الآن</span>
+                        </button>
+                    </div>
                 </div>
 
-                <div class="rate-card buy-card" onclick="rateCardClick('شراء')">
-                    <ion-icon name="trending-up-outline" class="rate-icon green"></ion-icon>
-                    <div class="rate-info">
-                        <span class="rate-label">شراء USDT</span>
-                        <strong class="rate-val green">SDG 1,960</strong>
+                <div class="rate-card-wrapper" style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="rate-card sell-card" onclick="rateCardClick('بيع')">
+                        <div class="rate-icon-wrapper red-bg">
+                            <ion-icon name="trending-down-outline" class="rate-icon red"></ion-icon>
+                        </div>
+                        <div class="rate-info">
+                            <span class="rate-label">سعر بيع USDT</span>
+                            <strong class="rate-val red">SDG 5,900</strong>
+                        </div>
+                        <div class="rate-status-dot red-dot"></div>
                     </div>
-                    <div class="rate-status-dot green-dot"></div>
+                    <div class="action-container-3d">
+                        <button class="btn-small-3d-sell" onclick="openSellModal()">
+                            <ion-icon name="arrow-down-circle-outline"></ion-icon>
+                            <span>بيع USDT الآن</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- قسم الاستثمار -->
             <div class="section-title">
                 <ion-icon name="trending-up-outline" class="modern-header-icon invest-icon"></ion-icon>
                 <h3>خطط الاستثمار</h3>
             </div>
             
             <div class="invest-grid">
-                <div class="invest-card gold" onclick="openChatWithContext('استثمار سنوي')">
+                <div class="invest-card gold monthly-card-styled" onclick="openInvestmentModal('استثمار شهري')">
+                    <div class="invest-head">
+                        <h4>استثمار شهري</h4>
+                        <span class="rate-badge gold-bg">12% / شهرياً</span>
+                    </div>
+                    <p>أرباح شهرية ثابتة وسحب عند الانتهاء.</p>
+                    <button class="btn-sub gold-btn"><ion-icon name="flash-outline"></ion-icon> استثمار سريع</button>
+                </div>
+
+                <div class="invest-card gold" onclick="openInvestmentModal('استثمار سنوي')">
                     <div class="invest-head">
                         <h4>استثمار سنوي</h4>
                         <span class="rate-badge gold-bg">25% / سنوياً</span>
                     </div>
                     <p>أعلى عائد استثماري آمن لمبالغك.</p>
-                    <button class="btn-sub gold-btn">تحدث مع المشرف 💬</button>
-                </div>
-
-                <div class="invest-card" onclick="openChatWithContext('استثمار شهري')">
-                    <div class="invest-head">
-                        <h4>استثمار شهري</h4>
-                        <span class="rate-badge">12% / شهرياً</span>
-                    </div>
-                    <p>أرباح شهرية ثابتة وسحب عند الانتهاء.</p>
-                    <button class="btn-sub">تحدث مع المشرف 💬</button>
+                    <button class="btn-sub gold-btn"><ion-icon name="shield-checkmark-outline"></ion-icon> استثمر بأمان</button>
                 </div>
             </div>
 
-            <!-- الخدمات المالية المباشرة -->
             <div class="section-title">
                 <ion-icon name="flash-outline" class="modern-header-icon flash-icon"></ion-icon>
                 <h3>الخدمات المباشرة</h3>
@@ -143,121 +403,462 @@
 
             <div class="services-grid">
                 <div class="service-card paypal" onclick="openChatWithContext('فتح حساب PayPal')">
-                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                    <div class="s-icon"><ion-icon name="logo-paypal"></ion-icon></div>
                     <div class="s-info">
                         <h4>فتح حساب بايبال</h4>
                         <p>تفعيل حساب PayPal جاهز للاستلام والسحب</p>
                     </div>
-                    <div class="s-icon"><ion-icon name="logo-paypal"></ion-icon></div>
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
                 </div>
 
                 <div class="service-card exness" onclick="openChatWithContext('فتح حساب Exness')">
-                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                    <div class="s-icon"><ion-icon name="trending-up-outline"></ion-icon></div>
                     <div class="s-info">
                         <h4>فتح حساب إكسنيس</h4>
                         <p>إنشاء وتوثيق حساب للتداول في Exness</p>
                     </div>
-                    <div class="s-icon"><ion-icon name="trending-up-outline"></ion-icon></div>
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
                 </div>
 
                 <div class="service-card card-visa" onclick="openChatWithContext('إنشاء فيزا افتراضية')">
-                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                    <div class="s-icon"><ion-icon name="card-outline"></ion-icon></div>
                     <div class="s-info">
                         <h4>إنشاء فيزا افتراضية</h4>
-                        <p>بطاقة Mastercard / Visa جاهزة للشراء والتسوق عبر الإنترنت</p>
+                        <p>بطاقة Mastercard / Visa جاهزة للشراء والتسوق</p>
                     </div>
-                    <div class="s-icon"><ion-icon name="card-outline"></ion-icon></div>
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
                 </div>
 
                 <div class="service-card games" onclick="openChatWithContext('دفع اشتراكات الألعاب')">
-                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                    <div class="s-icon"><ion-icon name="game-controller-outline"></ion-icon></div>
                     <div class="s-info">
                         <h4>دفع اشتراكات الألعاب</h4>
-                        <p>شحن النقاط والباقات في الألعاب والتطبيقات المباشرة</p>
+                        <p>شحن النقاط والباقات في الألعاب والتطبيقات</p>
                     </div>
-                    <div class="s-icon"><ion-icon name="game-controller-outline"></ion-icon></div>
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
                 </div>
 
-                <div class="service-card bank-issues" onclick="openChatWithContext('حل مشاكل الحسابات البنكية')">
-                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
-                    <div class="s-info">
-                        <h4>حل مشاكل الحسابات البنكية</h4>
-                        <p>مساعدة واستشارات لتسوية مشاكل المعاملات والحسابات</p>
-                    </div>
+                <div class="service-card bank-issues" onclick="openChatWithContext('حل مشاكل الحسابات')">
                     <div class="s-icon"><ion-icon name="build-outline"></ion-icon></div>
+                    <div class="s-info">
+                        <h4>حل مشاكل الحسابات</h4>
+                        <p>مساعدة واستشارات لتسوية المعاملات والحسابات</p>
+                    </div>
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- نافذة بيانات العميل (Modal) -->
+    <!-- نافذة عرض المبالغ الكبيرة -->
+    <div id="big-amount-modal" class="modal-overlay hidden">
+        <div class="modal-card amount-modal-card-3d">
+            <button class="close-modal" onclick="closeBigAmountModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header">
+                <div class="modal-icon-badge" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;">
+                    <ion-icon name="flash"></ion-icon>
+                </div>
+                <h3>عرض المبالغ الكبيرة (خصم 10%)</h3>
+                <p>الحد الأدنى للطلب هو <strong>1000 USDT</strong> وما فوق</p>
+            </div>
+
+            <div class="amount-input-group-3d">
+                <span class="currency-tag-3d">USDT</span>
+                <input type="number" id="big-quantity-input" placeholder="1000" min="1000" step="any">
+            </div>
+
+            <div class="amount-quick-chips">
+                <button type="button" onclick="setBigQuickAmount(1000)">1,000</button>
+                <button type="button" onclick="setBigQuickAmount(2500)">2,500</button>
+                <button type="button" onclick="setBigQuickAmount(5000)">5,000</button>
+                <button type="button" onclick="setBigQuickAmount(10000)">10,000</button>
+            </div>
+
+            <button onclick="sendBigAmountToWhatsApp()" class="btn-primary-3d">
+                <span>متابعة عرض المبالغ الكبيرة</span>
+                <ion-icon name="arrow-back-outline"></ion-icon>
+            </button>
+        </div>
+    </div>
+
+    <!-- نافذة شراء USDT -->
+    <div id="buy-amount-modal" class="modal-overlay hidden">
+        <div class="modal-card amount-modal-card-3d">
+            <button class="close-modal" onclick="closeBuyModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header">
+                <div class="modal-icon-badge">
+                    <ion-icon name="cart"></ion-icon>
+                </div>
+                <h3>حدد الكمية التي تريد شراؤها</h3>
+                <p>أدخل عدد الـ USDT المطلوبة لمتابعة الشراء</p>
+            </div>
+
+            <div class="amount-input-group-3d">
+                <span class="currency-tag-3d">USDT</span>
+                <input type="number" id="buy-quantity-input" placeholder="0.00" min="1" step="any">
+            </div>
+
+            <div class="amount-quick-chips">
+                <button type="button" onclick="setBuyQuickAmount(100)">100</button>
+                <button type="button" onclick="setBuyQuickAmount(500)">500</button>
+                <button type="button" onclick="setBuyQuickAmount(1000)">1,000</button>
+                <button type="button" onclick="setBuyQuickAmount(5000)">5,000</button>
+            </div>
+
+            <button onclick="sendBuyToWhatsApp()" class="btn-primary-3d">
+                <span>متابعة لإكمال الشراء</span>
+                <ion-icon name="arrow-back-outline"></ion-icon>
+            </button>
+        </div>
+    </div>
+
+    <!-- نافذة تحديد كمية البيع أو الاستثمار -->
+    <div id="sell-amount-modal" class="modal-overlay hidden">
+        <div class="modal-card amount-modal-card-3d">
+            <button class="close-modal" onclick="closeSellModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header">
+                <div class="modal-icon-badge">
+                    <ion-icon name="wallet"></ion-icon>
+                </div>
+                <h3 id="investment-modal-title">حدد الكمية التي تريد بيعها</h3>
+                <p>أدخل عدد الـ USDT المطلوبة للمتابعة</p>
+            </div>
+
+            <div class="amount-input-group-3d">
+                <span class="currency-tag-3d">USDT</span>
+                <input type="number" id="sell-quantity-input" placeholder="0.00" min="1" step="any">
+            </div>
+
+            <div class="amount-quick-chips">
+                <button type="button" onclick="setSellQuickAmount(100)">100</button>
+                <button type="button" onclick="setSellQuickAmount(500)">500</button>
+                <button type="button" onclick="setSellQuickAmount(1000)">1,000</button>
+                <button type="button" onclick="setSellQuickAmount(5000)">5,000</button>
+            </div>
+
+            <button onclick="proceedToPaymentGateway()" class="btn-primary-3d">
+                <span>متابعة إلى بيانات الدفع</span>
+                <ion-icon name="arrow-back-outline"></ion-icon>
+            </button>
+        </div>
+    </div>
+
+    <!-- نافذة بيانات الدفع وإرسال الإيصال -->
+    <div id="sell-payment-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d">
+            <button class="close-modal" onclick="closePaymentModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="margin-bottom: 12px;">
+                <h3>بيانات الدفع</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">العملية: <strong id="display-process-type" style="color: var(--text-main);">بيع USDT</strong> | الكمية: <strong id="display-sell-qty" style="color: var(--text-main);">0</strong> USDT</p>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">Binance ID</span>
+                <strong style="font-size: 13px; color: var(--text-main); user-select: all;">1268802737</strong>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">شبكة TRC20</span>
+                <strong style="font-size: 12px; color: var(--text-main); word-break: break-all; user-select: all;">TPcsk7uJmPcK4oLjnbsnNiJKW1bDDXu1gF</strong>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">شبكة BEP20</span>
+                <strong style="font-size: 12px; color: var(--text-main); word-break: break-all; user-select: all;">0x520a001683acb8758c39e35652bb71e695f434e</strong>
+            </div>
+
+            <label for="receipt-file-input" class="btn-primary-3d" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 12px; border-radius: 12px; font-weight: bold;">
+                <ion-icon name="receipt-outline"></ion-icon>
+                <span>إرفاق إيصال الدفع وإرسال للواتساب</span>
+            </label>
+            <input type="file" id="receipt-file-input" accept="image/*" style="display: none;" onchange="sendSellToWhatsAppWithReceipt(event)">
+
+            <button onclick="closePaymentModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة إكمال التحقق -->
+    <div id="verification-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d">
+            <button class="close-modal" onclick="closeVerificationModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header">
+                <div class="modal-icon-badge">
+                    <ion-icon name="camera-reverse-outline"></ion-icon>
+                </div>
+                <h3>توثيق الهوية (KYC)</h3>
+                <p>اضغط أدناه للسماح وتشغيل الكاميرا للتحقق الفوري</p>
+            </div>
+
+            <div class="kyc-warning-box">
+                تحذير. الرجاء التأكد من رفع مستندك الرسمي الصحيح لعدم حصول مشاكل في الحساب
+            </div>
+
+            <div id="camera-container-box" class="hidden" style="margin-bottom: 15px; position: relative; border-radius: 12px; overflow: hidden; background: #000;">
+                <video id="camera-video-stream" autoplay playsinline style="width: 100%; height: 200px; object-fit: cover; display: block;"></video>
+                <button onclick="capturePhotoFromStreamAndShowSuccess()" class="btn-primary" style="margin-top: 8px; background: #10b981;">التقاط الصورة الآن</button>
+            </div>
+
+            <button id="open-cam-trigger-btn" onclick="requestCameraAccess()" class="btn-primary-3d" style="margin-bottom: 10px;">
+                <ion-icon name="camera-outline"></ion-icon>
+                <span>السماح لتشغيل الكاميرا</span>
+            </button>
+
+            <div id="camera-error-hint" class="hidden" style="color: #dc2626; font-size: 11px; background: #fee2e2; padding: 8px; border-radius: 8px; margin-bottom: 10px; line-height: 1.4;">
+                ⚠️ الكاميرا محظورة من المتصفح. يرجى الضغط على رمز القفل 🔒 بشريط عنوان المتصفح وتفعيل الكاميرا.
+            </div>
+
+            <button onclick="closeVerificationModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة تنبيه عدم إكمال التحقق (3D) -->
+    <div id="investment-kyc-alert-modal" class="success-overlay">
+        <div class="success-card-3d">
+            <div class="success-icon-3d" style="background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 8px 16px rgba(245, 158, 11, 0.35);">
+                <ion-icon name="shield-alert-outline"></ion-icon>
+            </div>
+            <h3>تنبيه الأمان</h3>
+            <p>اكمل التحقق لبدء الاستثمار مع QMB</p>
+            <button class="btn-home" onclick="closeInvestmentKycAlert()">إكمال التحقق الآن</button>
+        </div>
+    </div>
+
+    <!-- نافذة النجاح -->
+    <div class="success-overlay" id="successOverlay">
+        <div class="success-card-3d">
+            <div class="success-icon-3d">✓</div>
+            <h3>تم التحقق</h3>
+            <p>تم استلام مستندك ويتم مراجعته</p>
+            <button class="btn-home" onclick="returnToHomeScreen()">الرجوع الي الشاشة الرئيسيه</button>
+        </div>
+    </div>
+
+    <!-- نافذة التنبيه -->
+    <div id="custom-alert-modal" class="success-overlay">
+        <div class="success-card-3d">
+            <div class="success-icon-3d" style="background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 8px 16px rgba(245, 158, 11, 0.35);">!</div>
+            <h3>تنبيه هام</h3>
+            <p>الحد الأدنى لعرض المبالغ الكبيرة هو 1000 USDT</p>
+            <button class="btn-home" onclick="closeCustomAlert()">موافق</button>
+        </div>
+    </div>
+
+    <!-- نافذة الملف الشخصي -->
     <div id="profile-modal" class="modal-overlay hidden">
-        <div class="modal-card">
-            <button class="close-modal" onclick="closeProfileModal()"><ion-icon name="close"></ion-icon></button>
+        <div class="profile-modal-content">
+            <button class="close-modal" onclick="closeProfileModal()" style="position: absolute; top: 15px; left: 15px; background: none; border: none; font-size: 24px; cursor: pointer;"><ion-icon name="close"></ion-icon></button>
+            
             <div class="modal-avatar-area">
-                <img id="modal-user-img" src="https://ui-avatars.com/api/?name=Mustafa&background=2563eb&color=fff" alt="صورة العميل">
+                <img id="modal-user-img" src="https://ui-avatars.com/api/?name=Uf&background=2563eb&color=fff" alt="صورة العميل">
                 <label for="change-avatar-input" class="change-photo-btn">
-                    <ion-icon name="camera-outline"></ion-icon> تغيير الصورة
+                    <ion-icon name="camera"></ion-icon>
                 </label>
                 <input type="file" id="change-avatar-input" accept="image/*" class="hidden" onchange="uploadAvatar(event)">
             </div>
             
-            <h3 id="modal-user-name" class="modal-title">Mustafa</h3>
-            <span class="modal-phone" id="modal-user-phone">09xxxxxxx</span>
+            <h3 id="modal-user-name" class="modal-title">Ufhif</h3>
+            <span class="modal-phone" id="modal-user-phone">999986</span>
 
-            <div class="user-stats">
-                <div class="stat-item">
+            <div class="user-stats-grid">
+                <div class="stat-box">
                     <span>حالة الحساب</span>
-                    <strong>موثق ✅</strong>
+                    <strong id="account-status-text">غير موثق ❌</strong>
                 </div>
-                <div class="stat-item">
+                <div class="stat-box">
                     <span>تاريخ الانضمام</span>
                     <strong id="modal-user-date">أغسطس 2026</strong>
                 </div>
             </div>
 
-            <div class="subscriptions-section">
-                <h4>خطط الاستثمار المشترك فيها:</h4>
+            <div class="subscriptions-section" style="text-align: right;">
+                <h4 style="font-size: 14px; color: #374151; margin-bottom: 10px;">الاشتراكات النشطة:</h4>
                 <div id="active-subscriptions" class="subscriptions-list">
-                    <div class="sub-item gold-sub">
-                        <ion-icon name="ribbon-outline"></ion-icon>
-                        <div>
-                            <strong>استثمار سنوي (نشط)</strong>
-                            <small>العائد: 25% سنوياً</small>
-                        </div>
-                    </div>
+                    <p style="color: #9ca3af; font-size: 13px; text-align: center; padding: 10px; border: 1px dashed #d1d5db; border-radius: 12px;">لا توجد اشتراكات حالياً</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- شاشة المحادثة المباشرة -->
-    <div id="chat-screen" class="screen">
-        <div class="chat-header">
-            <button onclick="navigateTo('app-screen')" class="back-btn"><ion-icon name="arrow-forward-outline"></ion-icon></button>
-            <div class="chat-title">
-                <h3 id="chat-service-title">المحادثة المباشرة</h3>
-                <span class="online-status">🟢 المشرف متصل الآن</span>
-            </div>
-        </div>
-
-        <div class="chat-body">
-            <div id="chat-messages" class="messages-container"></div>
-
-            <div class="chat-footer">
-                <label for="chat-file" class="attach-icon">
-                    <ion-icon name="image-outline"></ion-icon>
-                </label>
-                <input type="file" id="chat-file" accept="image/*" class="hidden" onchange="sendImageMessage(event)">
-
-                <input type="text" id="chat-input-text" placeholder="اكتب رسالتك هنا..." onkeypress="handleKeyPress(event)">
-                <button onclick="sendTextMessage()" class="btn-send-msg">
-                    <ion-icon name="send-outline"></ion-icon>
-                </button>
-            </div>
-        </div>
-    </div>
+    <div id="toast-container"></div>
+    <div id="dynamic-payment-wrapper"></div>
 
     <script src="app.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const isVerified = localStorage.getItem("qmb_account_verified") === "true";
+            updateVerificationUI(isVerified);
+        });
+
+        function updateVerificationUI(verified) {
+            const topVerifyText = document.getElementById('top-verify-text');
+            const topVerificationBtn = document.getElementById('top-verification-btn');
+            const accountStatusText = document.getElementById('account-status-text');
+
+            if (verified) {
+                if (topVerifyText) topVerifyText.innerText = "حساب موثق";
+                if (topVerificationBtn) {
+                    topVerificationBtn.style.background = "linear-gradient(135deg, #10b981, #059669)";
+                    topVerificationBtn.style.color = "#ffffff";
+                }
+                if (accountStatusText) accountStatusText.innerHTML = "موثق ✅";
+            } else {
+                if (topVerifyText) topVerifyText.innerText = "إكمال التحقق";
+                if (accountStatusText) accountStatusText.innerHTML = "غير موثق ❌";
+            }
+        }
+
+        function closeCustomAlert() {
+            document.getElementById('custom-alert-modal').classList.remove('active');
+        }
+
+        function openBigAmountModal() {
+            document.getElementById('big-amount-modal').classList.remove('hidden');
+        }
+
+        function closeBigAmountModal() {
+            document.getElementById('big-amount-modal').classList.add('hidden');
+        }
+
+        function setBigQuickAmount(val) {
+            document.getElementById('big-quantity-input').value = val;
+        }
+
+        function sendBigAmountToWhatsApp() {
+            const qty = document.getElementById('big-quantity-input').value;
+            if (!qty || parseFloat(qty) < 1000) {
+                document.getElementById('custom-alert-modal').classList.add('active');
+                return;
+            }
+            const message = `مرحباً، أود الاستفادة من عرض المبالغ الكبيرة (خصم 10%) لكمية ${qty} USDT.`;
+            const whatsappUrl = `https://wa.me/249125435055?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
+        function openBuyModal() {
+            document.getElementById('buy-amount-modal').classList.remove('hidden');
+        }
+
+        function closeBuyModal() {
+            document.getElementById('buy-amount-modal').classList.add('hidden');
+        }
+
+        function setBuyQuickAmount(val) {
+            document.getElementById('buy-quantity-input').value = val;
+        }
+
+        function sendBuyToWhatsApp() {
+            const qty = document.getElementById('buy-quantity-input').value;
+            if (!qty || parseFloat(qty) <= 0) {
+                alert('الرجاء إدخال كمية صحيحة');
+                return;
+            }
+            const message = `مرحباً، أود شراء كمية ${qty} USDT عبر المنصة.`;
+            const whatsappUrl = `https://wa.me/249125435055?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
+        let currentProcessType = 'بيع USDT';
+        let currentSellQuantity = 0;
+
+        function openSellModal() {
+            currentProcessType = 'بيع USDT';
+            document.getElementById('investment-modal-title').innerText = "حدد الكمية التي تريد بيعها";
+            document.getElementById('sell-amount-modal').classList.remove('hidden');
+        }
+
+        function openInvestmentModal(planName) {
+            const isVerified = localStorage.getItem("qmb_account_verified") === "true";
+            if (!isVerified) {
+                document.getElementById('investment-kyc-alert-modal').classList.add('active');
+                return;
+            }
+
+            currentProcessType = planName;
+            document.getElementById('investment-modal-title').innerText = `حدد كمية ${planName}`;
+            document.getElementById('sell-amount-modal').classList.remove('hidden');
+        }
+
+        function closeInvestmentKycAlert() {
+            document.getElementById('investment-kyc-alert-modal').classList.remove('active');
+            openVerificationModal();
+        }
+
+        function closeSellModal() {
+            document.getElementById('sell-amount-modal').classList.add('hidden');
+        }
+
+        function setSellQuickAmount(val) {
+            document.getElementById('sell-quantity-input').value = val;
+        }
+
+        function proceedToPaymentGateway() {
+            const inputVal = document.getElementById('sell-quantity-input').value;
+            if (!inputVal || parseFloat(inputVal) <= 0) {
+                alert('الرجاء إدخال كمية صحيحة');
+                return;
+            }
+            currentSellQuantity = inputVal;
+            document.getElementById('display-process-type').innerText = currentProcessType;
+            document.getElementById('display-sell-qty').innerText = currentSellQuantity;
+            
+            closeSellModal();
+            document.getElementById('sell-payment-modal').classList.remove('hidden');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('sell-payment-modal').classList.add('hidden');
+        }
+
+        function sendSellToWhatsAppWithReceipt(event) {
+            if (event.target.files && event.target.files[0]) {
+                const message = `مرحباً، أود الاشتراك في ${currentProcessType} بكمية ${currentSellQuantity} USDT. لقد قمت بتحويل المبلغ وهذا هو إيصال الدفع المرفق.`;
+                const whatsappUrl = `https://wa.me/249125435055?text=` + encodeURIComponent(message);
+                window.location.href = whatsappUrl;
+            }
+        }
+
+        async function requestCameraAccess() {
+            const errorHint = document.getElementById('camera-error-hint');
+            const cameraBox = document.getElementById('camera-container-box');
+            const video = document.getElementById('camera-video-stream');
+            
+            if (errorHint) errorHint.classList.add('hidden');
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment" } 
+                });
+
+                if (video) {
+                    video.srcObject = stream;
+                    cameraBox.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error("Camera denied or unavailable:", err);
+                if (errorHint) errorHint.classList.remove('hidden');
+            }
+        }
+
+        function showSuccess3DModal() {
+            document.getElementById('verification-modal').classList.add('hidden');
+            document.getElementById('successOverlay').classList.add('active');
+            
+            localStorage.setItem("qmb_account_verified", "true");
+            updateVerificationUI(true);
+        }
+
+        function returnToHomeScreen() {
+            document.getElementById('successOverlay').classList.remove('active');
+            const activeModals = document.querySelectorAll('.modal-overlay');
+            activeModals.forEach(modal => modal.classList.add('hidden'));
+        }
+
+        function capturePhotoFromStreamAndShowSuccess() {
+            if (typeof window.capturePhotoFromStream === 'function') {
+                window.capturePhotoFromStream();
+            }
+            showSuccess3DModal();
+        }
+    </script>
 </body>
 </html>

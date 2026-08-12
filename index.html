@@ -245,6 +245,78 @@
 
         .stat-box span { display: block; font-size: 11px; color: #6b7280; margin-bottom: 5px; }
         .stat-box strong { font-size: 14px; color: #111827; }
+
+        .payment-methods-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 15px 0;
+            text-align: right;
+        }
+        
+        .payment-method-card {
+            background: var(--card-bg-sub, #f9fafb);
+            border: 1.5px solid var(--card-border, #e5e7eb);
+            padding: 16px 20px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+
+        .payment-method-card:hover {
+            border-color: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.08);
+        }
+
+        .payment-method-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main, #111827);
+        }
+
+        .payment-method-header ion-icon {
+            font-size: 20px;
+            color: #2563eb;
+            transition: transform 0.3s ease;
+        }
+
+        .payment-details-box {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 13px;
+            color: var(--text-secondary, #6b7280);
+            border-top: 0px solid rgba(0,0,0,0.05);
+            margin-top: 0px;
+            padding-top: 0px;
+        }
+
+        .payment-method-card.active-method {
+            border-color: #2563eb;
+            background: rgba(37, 99, 235, 0.03);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
+        }
+
+        .payment-method-card.active-method .payment-details-box {
+            max-height: 100px;
+            opacity: 1;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top-width: 1px;
+        }
+
+        .payment-method-card.active-method .payment-method-header ion-icon {
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 <body>
@@ -307,7 +379,7 @@
                     <button class="eye-btn-3d" onclick="toggleBalance()"><ion-icon id="eye-icon" name="eye-outline"></ion-icon></button>
                 </div>
                 <div class="wallet-balance">
-                    <h2 id="usdt-balance"><small>USDT</small> 6,897,544.00</h2>
+                    <h2 id="usdt-balance"><small>USDT</small> <span id="liquidity-amount">6,897,544.00</span></h2>
                     <p id="sdg-balance">≈ SDG 41,730,141,200</p>
                 </div>
                 <div class="wallet-footer-info-clean">
@@ -339,7 +411,7 @@
                         </div>
                         <div class="rate-info">
                             <span class="rate-label">سعر شراء USDT</span>
-                            <strong class="rate-val green">SDG 6,050</strong>
+                            <strong class="rate-val green">SDG 6,100</strong>
                         </div>
                         <div class="rate-status-dot green-dot"></div>
                     </div>
@@ -358,7 +430,7 @@
                         </div>
                         <div class="rate-info">
                             <span class="rate-label">سعر بيع USDT</span>
-                            <strong class="rate-val red">SDG 5,900</strong>
+                            <strong class="rate-val red">SDG 5,910</strong>
                         </div>
                         <div class="rate-status-dot red-dot"></div>
                     </div>
@@ -402,7 +474,7 @@
             </div>
 
             <div class="services-grid">
-                <div class="service-card paypal" onclick="openChatWithContext('فتح حساب PayPal')">
+                <div class="service-card paypal" onclick="openPaypalServiceModal()">
                     <div class="s-icon"><ion-icon name="logo-paypal"></ion-icon></div>
                     <div class="s-info">
                         <h4>فتح حساب بايبال</h4>
@@ -411,7 +483,7 @@
                     <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
                 </div>
 
-                <div class="service-card exness" onclick="openChatWithContext('فتح حساب Exness')">
+                <div class="service-card exness" onclick="openExnessServiceModal()">
                     <div class="s-icon"><ion-icon name="trending-up-outline"></ion-icon></div>
                     <div class="s-info">
                         <h4>فتح حساب إكسنيس</h4>
@@ -420,7 +492,7 @@
                     <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
                 </div>
 
-                <div class="service-card card-visa" onclick="openChatWithContext('إنشاء فيزا افتراضية')">
+                <div class="service-card card-visa" onclick="openGenericServiceModal('إنشاء فيزا افتراضية', 'بطاقة Mastercard / Visa جاهزة للشراء والتسوق عبر الإنترنت.')">
                     <div class="s-icon"><ion-icon name="card-outline"></ion-icon></div>
                     <div class="s-info">
                         <h4>إنشاء فيزا افتراضية</h4>
@@ -429,7 +501,7 @@
                     <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
                 </div>
 
-                <div class="service-card games" onclick="openChatWithContext('دفع اشتراكات الألعاب')">
+                <div class="service-card games" onclick="openGenericServiceModal('دفع اشتراكات الألعاب', 'شحن النقاط والباقات المباشرة لمختلف الألعاب والتطبيقات.')">
                     <div class="s-icon"><ion-icon name="game-controller-outline"></ion-icon></div>
                     <div class="s-info">
                         <h4>دفع اشتراكات الألعاب</h4>
@@ -438,7 +510,7 @@
                     <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
                 </div>
 
-                <div class="service-card bank-issues" onclick="openChatWithContext('حل مشاكل الحسابات')">
+                <div class="service-card bank-issues" onclick="openGenericServiceModal('حل مشاكل الحسابات', 'مساعدة واستشارات فنيه وتذليل العقبات لتسوية المعاملات والحسابات المتروكة.')">
                     <div class="s-icon"><ion-icon name="build-outline"></ion-icon></div>
                     <div class="s-info">
                         <h4>حل مشاكل الحسابات</h4>
@@ -448,6 +520,371 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- نافذة تفاصيل الخدمات المباشرة العامة -->
+    <div id="generic-service-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; text-align: right;">
+            <button class="close-modal" onclick="closeGenericServiceModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="text-align: center; margin-bottom: 15px;">
+                <div class="modal-icon-badge" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white;">
+                    <ion-icon name="sparkles-outline"></ion-icon>
+                </div>
+                <h3 id="generic-service-title">عنوان الخدمة</h3>
+                <p id="generic-service-desc" style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;"></p>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 15px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--card-border, #e5e7eb);">
+                <h4 style="font-size: 14px; color: var(--text-main); margin-bottom: 8px;">التنفيذ والمتابعة:</h4>
+                <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.6;">تواصل معنا مباشرة لتزويدنا ببيانات التفاصيل وتحديد قيمة الرسوم ورسوم الشحن إن وجدت لبدء المعاملة فوراً.</p>
+            </div>
+
+            <button onclick="submitGenericServiceToWhatsapp()" class="btn-primary-3d" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 14px; font-size: 15px;">
+                <span>متابعة عبر الواتساب</span>
+                <ion-icon name="logo-whatsapp"></ion-icon>
+            </button>
+            <button onclick="closeGenericServiceModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة تفاصيل خدمة فتح حساب بايبال -->
+    <div id="paypal-service-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; text-align: right;">
+            <button class="close-modal" onclick="closePaypalServiceModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="text-align: center; margin-bottom: 15px;">
+                <div class="modal-icon-badge" style="background: linear-gradient(135deg, #0079C1, #00457C); color: white;">
+                    <ion-icon name="logo-paypal"></ion-icon>
+                </div>
+                <h3>فتح حساب بايبال</h3>
+                <p style="font-size: 14px; font-weight: bold; color: #059669; margin-top: 5px;">50 دولار شاملة الضريبة (حساب جاهز موثق بالكامل)</p>
+                <p style="font-size: 13px; font-weight: 600; color: #2563eb; margin-top: 4px;">ما يعادل 302,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 15px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--card-border, #e5e7eb);">
+                <h4 style="font-size: 14px; color: var(--text-main); margin-bottom: 8px;">المتطلبات:</h4>
+                <ul style="padding-right: 20px; font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+                    <li>جواز سفر</li>
+                    <li>بريد إلكتروني</li>
+                    <li>رقم شريحة فعال</li>
+                </ul>
+            </div>
+
+            <button onclick="proceedFromPaypalToPayment()" class="btn-primary-3d" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 14px; font-size: 15px;">
+                <span>إكمال فتح الحساب</span>
+                <ion-icon name="arrow-back-outline"></ion-icon>
+            </button>
+            <button onclick="closePaypalServiceModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة اختيار طريقة الدفع لخدمة بايبال -->
+    <div id="paypal-payment-method-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; text-align: right;">
+            <button class="close-modal" onclick="closePaypalPaymentMethodModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="text-align: center; margin-bottom: 15px;">
+                <h3>طريقة دفع رسوم بايبال</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">اختر طريقة الدفع المناسبة لك لإتمام رسوم الحساب (50$)</p>
+                <p style="font-size: 12px; font-weight: 600; color: #2563eb; margin-top: 3px;">ما يعادل 302,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button onclick="selectPaypalUsdtPayment()" class="btn-primary-3d" style="flex: 1; background: linear-gradient(135deg, #f59e0b, #d97706); font-size: 13px; padding: 12px;">
+                    <ion-icon name="logo-bitcoin"></ion-icon>
+                    <span>الدفع عن طريق USDT</span>
+                </button>
+                <button onclick="selectPaypalLocalPayment()" class="btn-primary-3d" style="flex: 1; background: linear-gradient(135deg, #2563eb, #1d4ed8); font-size: 13px; padding: 12px;">
+                    <ion-icon name="card-outline"></ion-icon>
+                    <span>الدفع المحلي (بنكك/فوري)</span>
+                </button>
+            </div>
+
+            <button onclick="closePaypalPaymentMethodModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة بيانات الدفع USDT الخاصة ببايبال -->
+    <div id="paypal-usdt-gateway-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; max-height: 90vh; overflow-y: auto; text-align: right;">
+            <button class="close-modal" onclick="closePaypalUsdtGateway()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="margin-bottom: 12px;">
+                <h3>بيانات الدفع (USDT)</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">الخدمة: <strong>فتح حساب بايبال</strong> | الرسوم: <strong>50 USDT</strong></p>
+                <p style="font-size: 12px; font-weight: 600; color: #2563eb; margin-top: 3px;">ما يعادل 302,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">Binance ID</span>
+                <strong style="font-size: 13px; color: var(--text-main); user-select: all;">1268802737</strong>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">شبكة TRC20</span>
+                <strong style="font-size: 12px; color: var(--text-main); word-break: break-all; user-select: all;">TPcsk7uJmPcK4oLjnbsnNiJKW1bDDXu1gF</strong>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">شبكة BEP20</span>
+                <strong style="font-size: 12px; color: var(--text-main); word-break: break-all; user-select: all;">0x520a001683acb8758c39e35652bb71e695f434e</strong>
+            </div>
+
+            <div id="paypal-receipt-section" style="margin-top: 15px;">
+                <label for="paypal-receipt-input" class="btn-primary-3d" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 12px; border-radius: 12px; font-weight: bold;">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                    <span id="paypal-receipt-label">إرفاق إيصال الدفع</span>
+                </label>
+                <input type="file" id="paypal-receipt-input" accept="image/*" style="display: none;" onchange="handlePaypalReceiptSelected(event)">
+            </div>
+
+            <button id="btn-paypal-done" class="btn-primary-3d hidden" onclick="submitPaypalOrder()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); margin-top: 10px; padding: 14px; font-size: 15px;">
+                <span>تم الدفع (إكمال فتح حسابك الآن)</span>
+                <ion-icon name="logo-whatsapp"></ion-icon>
+            </button>
+
+            <button onclick="closePaypalUsdtGateway()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة بيانات الدفع المحلي لخدمة بايبال -->
+    <div id="paypal-local-gateway-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; max-height: 90vh; overflow-y: auto; text-align: right;">
+            <button class="close-modal" onclick="closePaypalLocalGateway()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="margin-bottom: 12px;">
+                <h3>اختر طريقة الدفع المحلي</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">الخدمة: <strong>فتح حساب بايبال (50$)</strong></p>
+                <p style="font-size: 12px; font-weight: 600; color: #2563eb; margin-top: 3px;">ما يعادل 302,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div class="payment-methods-grid">
+                <div class="payment-method-card" id="p-card-bonk" onclick="togglePaypalLocalCard('بنكك')">
+                    <div class="payment-method-header">
+                        <span>بنكك</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>6885238</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+
+                <div class="payment-method-card" id="p-card-fawry" onclick="togglePaypalLocalCard('فوري')">
+                    <div class="payment-method-header">
+                        <span>فوري</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>52204397</code><br>
+                        الاسم: مصطفي ادم
+                    </div>
+                </div>
+
+                <div class="payment-method-card" id="p-card-owocash" onclick="togglePaypalLocalCard('اووكاش')">
+                    <div class="payment-method-header">
+                        <span>اووكاش</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>1811805</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+
+                <div class="payment-method-card" id="p-card-mycashi" onclick="togglePaypalLocalCard('ماي كاشي')">
+                    <div class="payment-method-header">
+                        <span>ماي كاشي</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>400700101</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+            </div>
+
+            <div id="paypal-local-receipt-section" class="hidden" style="margin-top: 15px;">
+                <label for="paypal-local-receipt-input" class="btn-primary-3d" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 12px; border-radius: 12px; font-weight: bold;">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                    <span id="paypal-local-receipt-label">إرفاق إيصال الدفع</span>
+                </label>
+                <input type="file" id="paypal-local-receipt-input" accept="image/*" style="display: none;" onchange="handlePaypalLocalReceiptSelected(event)">
+            </div>
+
+            <button id="btn-paypal-local-done" class="btn-primary-3d hidden" onclick="submitPaypalLocalOrder()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); margin-top: 10px; padding: 14px; font-size: 15px;">
+                <span>تم الدفع (إكمال فتح حسابك الآن)</span>
+                <ion-icon name="logo-whatsapp"></ion-icon>
+            </button>
+
+            <button onclick="closePaypalLocalGateway()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة تفاصيل خدمة فتح حساب إكسنيس (Exness) -->
+    <div id="exness-service-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; text-align: right;">
+            <button class="close-modal" onclick="closeExnessServiceModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="text-align: center; margin-bottom: 15px;">
+                <div class="modal-icon-badge" style="background: linear-gradient(135deg, #FF5500, #CC3300); color: white;">
+                    <ion-icon name="trending-up-outline"></ion-icon>
+                </div>
+                <h3>فتح حساب Exness</h3>
+                <p style="font-size: 14px; font-weight: bold; color: #059669; margin-top: 5px;">30 دولار شاملة التوثيق والإنشاء الكامل</p>
+                <p style="font-size: 13px; font-weight: 600; color: #2563eb; margin-top: 4px;">ما يعادل 181,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 15px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--card-border, #e5e7eb);">
+                <h4 style="font-size: 14px; color: var(--text-main); margin-bottom: 8px;">المتطلبات:</h4>
+                <ul style="padding-right: 20px; font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+                    <li>جواز سفر أو بطاقة شخصية</li>
+                    <li>بريد إلكتروني فعال</li>
+                    <li>رقم هاتف مفعل</li>
+                </ul>
+            </div>
+
+            <button onclick="proceedFromExnessToPayment()" class="btn-primary-3d" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 14px; font-size: 15px;">
+                <span>إكمال فتح الحساب</span>
+                <ion-icon name="arrow-back-outline"></ion-icon>
+            </button>
+            <button onclick="closeExnessServiceModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة اختيار طريقة الدفع لخدمة إكسنيس -->
+    <div id="exness-payment-method-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; text-align: right;">
+            <button class="close-modal" onclick="closeExnessPaymentMethodModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="text-align: center; margin-bottom: 15px;">
+                <h3>طريقة دفع رسوم إكسنيس</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">اختر طريقة الدفع المناسبة لك لإتمام رسوم الحساب (30$)</p>
+                <p style="font-size: 12px; font-weight: 600; color: #2563eb; margin-top: 3px;">ما يعادل 181,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button onclick="selectExnessUsdtPayment()" class="btn-primary-3d" style="flex: 1; background: linear-gradient(135deg, #f59e0b, #d97706); font-size: 13px; padding: 12px;">
+                    <ion-icon name="logo-bitcoin"></ion-icon>
+                    <span>الدفع عن طريق USDT</span>
+                </button>
+                <button onclick="selectExnessLocalPayment()" class="btn-primary-3d" style="flex: 1; background: linear-gradient(135deg, #2563eb, #1d4ed8); font-size: 13px; padding: 12px;">
+                    <ion-icon name="card-outline"></ion-icon>
+                    <span>الدفع المحلي (بنكك/فوري)</span>
+                </button>
+            </div>
+
+            <button onclick="closeExnessPaymentMethodModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة بيانات الدفع USDT الخاصة بإكسنيس -->
+    <div id="exness-usdt-gateway-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; max-height: 90vh; overflow-y: auto; text-align: right;">
+            <button class="close-modal" onclick="closeExnessUsdtGateway()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="margin-bottom: 12px;">
+                <h3>بيانات الدفع (USDT)</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">الخدمة: <strong>فتح حساب إكسنيس</strong> | الرسوم: <strong>30 USDT</strong></p>
+                <p style="font-size: 12px; font-weight: 600; color: #2563eb; margin-top: 3px;">ما يعادل 181,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">Binance ID</span>
+                <strong style="font-size: 13px; color: var(--text-main); user-select: all;">1268802737</strong>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">شبكة TRC20</span>
+                <strong style="font-size: 12px; color: var(--text-main); word-break: break-all; user-select: all;">TPcsk7uJmPcK4oLjnbsnNiJKW1bDDXu1gF</strong>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">شبكة BEP20</span>
+                <strong style="font-size: 12px; color: var(--text-main); word-break: break-all; user-select: all;">0x520a001683acb8758c39e35652bb71e695f434e</strong>
+            </div>
+
+            <div id="exness-receipt-section" style="margin-top: 15px;">
+                <label for="exness-receipt-input" class="btn-primary-3d" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 12px; border-radius: 12px; font-weight: bold;">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                    <span id="exness-receipt-label">إرفاق إيصال الدفع</span>
+                </label>
+                <input type="file" id="exness-receipt-input" accept="image/*" style="display: none;" onchange="handleExnessReceiptSelected(event)">
+            </div>
+
+            <button id="btn-exness-done" class="btn-primary-3d hidden" onclick="submitExnessOrder()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); margin-top: 10px; padding: 14px; font-size: 15px;">
+                <span>تم الدفع (إكمال فتح حسابك الآن)</span>
+                <ion-icon name="logo-whatsapp"></ion-icon>
+            </button>
+
+            <button onclick="closeExnessUsdtGateway()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة بيانات الدفع المحلي لخدمة إكسنيس -->
+    <div id="exness-local-gateway-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; max-height: 90vh; overflow-y: auto; text-align: right;">
+            <button class="close-modal" onclick="closeExnessLocalGateway()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="margin-bottom: 12px;">
+                <h3>اختر طريقة الدفع المحلي</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">الخدمة: <strong>فتح حساب إكسنيس (30$)</strong></p>
+                <p style="font-size: 12px; font-weight: 600; color: #2563eb; margin-top: 3px;">ما يعادل 181,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div class="payment-methods-grid">
+                <div class="payment-method-card" id="ex-card-bonk" onclick="toggleExnessLocalCard('بنكك')">
+                    <div class="payment-method-header">
+                        <span>بنكك</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>6885238</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+
+                <div class="payment-method-card" id="ex-card-fawry" onclick="toggleExnessLocalCard('فوري')">
+                    <div class="payment-method-header">
+                        <span>فوري</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>52204397</code><br>
+                        الاسم: مصطفي ادم
+                    </div>
+                </div>
+
+                <div class="payment-method-card" id="ex-card-owocash" onclick="toggleExnessLocalCard('اووكاش')">
+                    <div class="payment-method-header">
+                        <span>اووكاش</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>1811805</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+
+                <div class="payment-method-card" id="ex-card-mycashi" onclick="toggleExnessLocalCard('ماي كاشي')">
+                    <div class="payment-method-header">
+                        <span>ماي كاشي</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>400700101</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+            </div>
+
+            <div id="exness-local-receipt-section" class="hidden" style="margin-top: 15px;">
+                <label for="exness-local-receipt-input" class="btn-primary-3d" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 12px; border-radius: 12px; font-weight: bold;">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                    <span id="exness-local-receipt-label">إرفاق إيصال الدفع</span>
+                </label>
+                <input type="file" id="exness-local-receipt-input" accept="image/*" style="display: none;" onchange="handleExnessLocalReceiptSelected(event)">
+            </div>
+
+            <button id="btn-exness-local-done" class="btn-primary-3d hidden" onclick="submitExnessLocalOrder()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); margin-top: 10px; padding: 14px; font-size: 15px;">
+                <span>تم الدفع (إكمال فتح حسابك الآن)</span>
+                <ion-icon name="logo-whatsapp"></ion-icon>
+            </button>
+
+            <button onclick="closeExnessLocalGateway()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
     </div>
 
     <!-- نافذة عرض المبالغ الكبيرة -->
@@ -474,10 +911,16 @@
                 <button type="button" onclick="setBigQuickAmount(10000)">10,000</button>
             </div>
 
-            <button onclick="sendBigAmountToWhatsApp()" class="btn-primary-3d">
-                <span>متابعة عرض المبالغ الكبيرة</span>
-                <ion-icon name="arrow-back-outline"></ion-icon>
-            </button>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button onclick="proceedBigAmountBuy()" class="btn-primary-3d" style="flex: 1; background: linear-gradient(135deg, #10b981, #059669);">
+                    <span>شراء</span>
+                    <ion-icon name="cart-outline"></ion-icon>
+                </button>
+                <button onclick="proceedBigAmountSell()" class="btn-primary-3d" style="flex: 1; background: linear-gradient(135deg, #ef4444, #dc2626);">
+                    <span>بيع</span>
+                    <ion-icon name="wallet-outline"></ion-icon>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -505,8 +948,8 @@
                 <button type="button" onclick="setBuyQuickAmount(5000)">5,000</button>
             </div>
 
-            <button onclick="sendBuyToWhatsApp()" class="btn-primary-3d">
-                <span>متابعة لإكمال الشراء</span>
+            <button onclick="proceedToBuyPaymentGateway()" class="btn-primary-3d">
+                <span>متابعة لبيانات الدفع</span>
                 <ion-icon name="arrow-back-outline"></ion-icon>
             </button>
         </div>
@@ -543,9 +986,81 @@
         </div>
     </div>
 
-    <!-- نافذة بيانات الدفع وإرسال الإيصال -->
+    <!-- نافذة بيانات الدفع وإرسال الإيصال (الشراء) -->
+    <div id="buy-payment-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; max-height: 90vh; overflow-y: auto;">
+            <button class="close-modal" onclick="closeBuyPaymentModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="margin-bottom: 8px;">
+                <h3>اختر طريقة الدفع المفضلة 💳</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">العملية: <strong id="display-buy-type" style="color: var(--text-main);">شراء USDT</strong> | الكمية: <strong id="display-buy-qty" style="color: var(--text-main);">0</strong> USDT</p>
+            </div>
+
+            <div class="payment-methods-grid">
+                <div class="payment-method-card" id="card-bonk" onclick="togglePaymentCard('بنكك')">
+                    <div class="payment-method-header">
+                        <span>بنكك</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>6885238</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+
+                <div class="payment-method-card" id="card-fawry" onclick="togglePaymentCard('فوري')">
+                    <div class="payment-method-header">
+                        <span>فوري</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>52204397</code><br>
+                        الاسم: مصطفي ادم
+                    </div>
+                </div>
+
+                <div class="payment-method-card" id="card-owocash" onclick="togglePaymentCard('اووكاش')">
+                    <div class="payment-method-header">
+                        <span>اووكاش</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>1811805</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+
+                <div class="payment-method-card" id="card-mycashi" onclick="togglePaymentCard('ماي كاشي')">
+                    <div class="payment-method-header">
+                        <span>ماي كاشي</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>400700101</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+            </div>
+
+            <div id="receipt-upload-section" class="hidden" style="margin-top: 15px;">
+                <label for="buy-receipt-file-input" class="btn-primary-3d" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 12px; border-radius: 12px; font-weight: bold;">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                    <span id="receipt-label-text">إرفاق إشعار الدفع هنا</span>
+                </label>
+                <input type="file" id="buy-receipt-file-input" accept="image/*" style="display: none;" onchange="handleReceiptSelected(event)">
+            </div>
+
+            <button id="btn-done-payment" class="btn-primary-3d hidden" onclick="submitPaymentAndOpenWhatsApp()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); margin-top: 10px; padding: 14px; font-size: 15px;">
+                <span>تم الدفع (إرسال للواتساب)</span>
+                <ion-icon name="logo-whatsapp"></ion-icon>
+            </button>
+
+            <button onclick="closeBuyPaymentModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة بيانات الدفع الخاصة بالبيع -->
     <div id="sell-payment-modal" class="modal-overlay hidden">
-        <div class="modal-card verify-modal-3d">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; max-height: 90vh; overflow-y: auto; text-align: right;">
             <button class="close-modal" onclick="closePaymentModal()"><ion-icon name="close"></ion-icon></button>
             <div class="amount-modal-header" style="margin-bottom: 12px;">
                 <h3>بيانات الدفع</h3>
@@ -567,17 +1082,24 @@
                 <strong style="font-size: 12px; color: var(--text-main); word-break: break-all; user-select: all;">0x520a001683acb8758c39e35652bb71e695f434e</strong>
             </div>
 
-            <label for="receipt-file-input" class="btn-primary-3d" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 12px; border-radius: 12px; font-weight: bold;">
-                <ion-icon name="receipt-outline"></ion-icon>
-                <span>إرفاق إيصال الدفع وإرسال للواتساب</span>
-            </label>
-            <input type="file" id="receipt-file-input" accept="image/*" style="display: none;" onchange="sendSellToWhatsAppWithReceipt(event)">
+            <div id="sell-receipt-upload-section" style="margin-top: 15px;">
+                <label for="receipt-file-input" class="btn-primary-3d" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 12px; border-radius: 12px; font-weight: bold;">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                    <span id="sell-receipt-label-text">إرفاق إيصال الدفع</span>
+                </label>
+                <input type="file" id="receipt-file-input" accept="image/*" style="display: none;" onchange="handleSellReceiptSelected(event)">
+            </div>
 
-            <button onclick="closePaymentModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px;">إلغاء</button>
+            <button id="btn-done-sell-payment" class="btn-primary-3d hidden" onclick="submitSellPaymentAndOpenWhatsApp()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); margin-top: 10px; padding: 14px; font-size: 15px;">
+                <span>تم الدفع (إرسال للواتساب)</span>
+                <ion-icon name="logo-whatsapp"></ion-icon>
+            </button>
+
+            <button onclick="closePaymentModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
         </div>
     </div>
 
-    <!-- نافذة إكمال التحقق (محدثة لرفع الملفات من الجهاز مباشرة بدلاً من الكاميرا) -->
+    <!-- نافذة إكمال التحقق -->
     <div id="verification-modal" class="modal-overlay hidden">
         <div class="modal-card verify-modal-3d">
             <button class="close-modal" onclick="closeVerificationModal()"><ion-icon name="close"></ion-icon></button>
@@ -593,7 +1115,6 @@
                 تحذير. الرجاء التأكد من رفع مستندك الرسمي الصحيح لعدم حصول مشاكل في الحساب
             </div>
 
-            <!-- زر اختيار ورفع الصورة من الجهاز مباشرة -->
             <label for="kyc-file-upload-input" class="btn-primary-3d" style="margin-bottom: 10px; background: linear-gradient(135deg, #2563eb, #1d4ed8); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 14px; border-radius: 12px; font-weight: bold;">
                 <ion-icon name="image-outline" style="font-size: 20px;"></ion-icon>
                 <span>رفع صورة التحقق من الجهاز</span>
@@ -677,9 +1198,33 @@
 
     <script src="app.js"></script>
     <script>
+        function updatePlatformLiquidity() {
+            const minLimit = 9000000;
+            const randomLiquidity = Math.floor(Math.random() * 1000000) + minLimit;
+            const formattedLiquidity = randomLiquidity.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            const liquidityElement = document.getElementById('liquidity-amount');
+            if (liquidityElement) {
+                liquidityElement.innerText = formattedLiquidity;
+            }
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
             const isVerified = localStorage.getItem("qmb_account_verified") === "true";
             updateVerificationUI(isVerified);
+            updatePlatformLiquidity();
+            setInterval(updatePlatformLiquidity, 12 * 60 * 60 * 1000);
+
+            // إغلاق النوافذ عند النقر على الخلفية الضبابية Outside Click
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            });
         });
 
         function updateVerificationUI(verified) {
@@ -716,15 +1261,48 @@
             document.getElementById('big-quantity-input').value = val;
         }
 
-        function sendBigAmountToWhatsApp() {
+        let currentBuyQuantity = 0;
+        let selectedPaymentOption = '';
+
+        function proceedBigAmountBuy() {
             const qty = document.getElementById('big-quantity-input').value;
             if (!qty || parseFloat(qty) < 1000) {
                 document.getElementById('custom-alert-modal').classList.add('active');
                 return;
             }
-            const message = `مرحباً، أود الاستفادة من عرض المبالغ الكبيرة (خصم 10%) لكمية ${qty} USDT.`;
-            const whatsappUrl = `https://wa.me/249904252568?text=` + encodeURIComponent(message);
-            window.location.href = whatsappUrl;
+            currentBuyQuantity = qty;
+            document.getElementById('display-buy-type').innerText = "عرض المبالغ الكبيرة (شراء)";
+            document.getElementById('display-buy-qty').innerText = currentBuyQuantity;
+
+            selectedPaymentOption = '';
+            document.querySelectorAll('.payment-method-card').forEach(el => el.classList.remove('active-method'));
+            document.getElementById('receipt-upload-section').classList.add('hidden');
+            document.getElementById('btn-done-payment').classList.add('hidden');
+
+            closeBigAmountModal();
+            document.getElementById('buy-payment-modal').classList.remove('hidden');
+        }
+
+        let currentProcessType = 'بيع USDT';
+        let currentSellQuantity = 0;
+
+        function proceedBigAmountSell() {
+            const qty = document.getElementById('big-quantity-input').value;
+            if (!qty || parseFloat(qty) < 1000) {
+                document.getElementById('custom-alert-modal').classList.add('active');
+                return;
+            }
+            currentSellQuantity = qty;
+            currentProcessType = 'عرض المبالغ الكبيرة (بيع)';
+            document.getElementById('display-process-type').innerText = currentProcessType;
+            document.getElementById('display-sell-qty').innerText = currentSellQuantity;
+
+            document.getElementById('sell-receipt-label-text').innerText = "إرفاق إيصال الدفع";
+            document.getElementById('btn-done-sell-payment').classList.add('hidden');
+            document.getElementById('receipt-file-input').value = "";
+
+            closeBigAmountModal();
+            document.getElementById('sell-payment-modal').classList.remove('hidden');
         }
 
         function openBuyModal() {
@@ -739,19 +1317,66 @@
             document.getElementById('buy-quantity-input').value = val;
         }
 
-        function sendBuyToWhatsApp() {
+        function proceedToBuyPaymentGateway() {
             const qty = document.getElementById('buy-quantity-input').value;
             if (!qty || parseFloat(qty) <= 0) {
                 alert('الرجاء إدخال كمية صحيحة');
                 return;
             }
-            const message = `مرحباً، أود شراء كمية ${qty} USDT عبر المنصة.`;
+            currentBuyQuantity = qty;
+            document.getElementById('display-buy-type').innerText = "شراء USDT";
+            document.getElementById('display-buy-qty').innerText = currentBuyQuantity;
+
+            selectedPaymentOption = '';
+            document.querySelectorAll('.payment-method-card').forEach(el => el.classList.remove('active-method'));
+            document.getElementById('receipt-upload-section').classList.add('hidden');
+            document.getElementById('btn-done-payment').classList.add('hidden');
+
+            closeBuyModal();
+            document.getElementById('buy-payment-modal').classList.remove('hidden');
+        }
+
+        function togglePaymentCard(methodName) {
+            selectedPaymentOption = methodName;
+            
+            document.querySelectorAll('.payment-method-card').forEach(card => {
+                card.classList.remove('active-method');
+            });
+
+            let activeCardId = '';
+            if(methodName === 'بنكك') activeCardId = 'card-bonk';
+            if(methodName === 'فوري') activeCardId = 'card-fawry';
+            if(methodName === 'اووكاش') activeCardId = 'card-owocash';
+            if(methodName === 'ماي كاشي') activeCardId = 'card-mycashi';
+
+            const selectedCard = document.getElementById(activeCardId);
+            if(selectedCard) {
+                selectedCard.classList.add('active-method');
+            }
+
+            document.getElementById('receipt-upload-section').classList.remove('hidden');
+        }
+
+        function handleReceiptSelected(event) {
+            if (event.target.files && event.target.files[0]) {
+                document.getElementById('receipt-label-text').innerText = "✓ تم إرفاق الإشعار بنجاح (تغيير)";
+                document.getElementById('btn-done-payment').classList.remove('hidden');
+            }
+        }
+
+        function submitPaymentAndOpenWhatsApp() {
+            if (!selectedPaymentOption) {
+                alert('الرجاء تحديد طريقة الدفع أولاً');
+                return;
+            }
+            const message = `مرحباً، أود إتمام معاملة كمية ${currentBuyQuantity} USDT عبر المنصة (شراء).\nطريقة الدفع المختارة: ${selectedPaymentOption}.\nلقد قمت بتحويل المبلغ وهذا هو إيصال الدفع المرفق.`;
             const whatsappUrl = `https://wa.me/249904252568?text=` + encodeURIComponent(message);
             window.location.href = whatsappUrl;
         }
 
-        let currentProcessType = 'بيع USDT';
-        let currentSellQuantity = 0;
+        function closeBuyPaymentModal() {
+            document.getElementById('buy-payment-modal').classList.add('hidden');
+        }
 
         function openSellModal() {
             currentProcessType = 'بيع USDT';
@@ -794,6 +1419,10 @@
             document.getElementById('display-process-type').innerText = currentProcessType;
             document.getElementById('display-sell-qty').innerText = currentSellQuantity;
             
+            document.getElementById('sell-receipt-label-text').innerText = "إرفاق إيصال الدفع";
+            document.getElementById('btn-done-sell-payment').classList.add('hidden');
+            document.getElementById('receipt-file-input').value = "";
+
             closeSellModal();
             document.getElementById('sell-payment-modal').classList.remove('hidden');
         }
@@ -802,12 +1431,219 @@
             document.getElementById('sell-payment-modal').classList.add('hidden');
         }
 
-        function sendSellToWhatsAppWithReceipt(event) {
+        function handleSellReceiptSelected(event) {
             if (event.target.files && event.target.files[0]) {
-                const message = `مرحباً، أود الاشتراك في ${currentProcessType} بكمية ${currentSellQuantity} USDT. لقد قمت بتحويل المبلغ وهذا هو إيصال الدفع المرفق.`;
-                const whatsappUrl = `https://wa.me/249904252568?text=` + encodeURIComponent(message);
-                window.location.href = whatsappUrl;
+                document.getElementById('sell-receipt-label-text').innerText = "✓ تم إرفاق الإيصال بنجاح (تغيير)";
+                document.getElementById('btn-done-sell-payment').classList.remove('hidden');
             }
+        }
+
+        function submitSellPaymentAndOpenWhatsApp() {
+            const message = `مرحباً، أود إتمام معاملة كمية ${currentSellQuantity} USDT عبر المنصة (${currentProcessType}). لقد قمت بتحويل المبلغ وهذا هو إيصال الدفع المرفق.`;
+            const whatsappUrl = `https://wa.me/249904252568?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
+        /* دوال الخدمات العامة المباشرة */
+        let activeGenericServiceName = '';
+
+        function openGenericServiceModal(serviceName, serviceDesc) {
+            activeGenericServiceName = serviceName;
+            document.getElementById('generic-service-title').innerText = serviceName;
+            document.getElementById('generic-service-desc').innerText = serviceDesc;
+            document.getElementById('generic-service-modal').classList.remove('hidden');
+        }
+
+        function closeGenericServiceModal() {
+            document.getElementById('generic-service-modal').classList.add('hidden');
+        }
+
+        function submitGenericServiceToWhatsapp() {
+            const message = `مرحباً، أود الإستفسار وطلب خدمة: ${activeGenericServiceName}.`;
+            const whatsappUrl = `https://wa.me/249904252568?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
+        /* دوال خدمة فتح حساب بايبال */
+        function openPaypalServiceModal() {
+            document.getElementById('paypal-service-modal').classList.remove('hidden');
+        }
+
+        function closePaypalServiceModal() {
+            document.getElementById('paypal-service-modal').classList.add('hidden');
+        }
+
+        function proceedFromPaypalToPayment() {
+            closePaypalServiceModal();
+            document.getElementById('paypal-payment-method-modal').classList.remove('hidden');
+        }
+
+        function closePaypalPaymentMethodModal() {
+            document.getElementById('paypal-payment-method-modal').classList.add('hidden');
+        }
+
+        function selectPaypalUsdtPayment() {
+            closePaypalPaymentMethodModal();
+            document.getElementById('paypal-receipt-label').innerText = "إرفاق إيصال الدفع";
+            document.getElementById('btn-paypal-done').classList.add('hidden');
+            document.getElementById('paypal-receipt-input').value = "";
+            document.getElementById('paypal-usdt-gateway-modal').classList.remove('hidden');
+        }
+
+        function closePaypalUsdtGateway() {
+            document.getElementById('paypal-usdt-gateway-modal').classList.add('hidden');
+        }
+
+        function handlePaypalReceiptSelected(event) {
+            if (event.target.files && event.target.files[0]) {
+                document.getElementById('paypal-receipt-label').innerText = "✓ تم إرفاق الإيصال بنجاح (تغيير)";
+                document.getElementById('btn-paypal-done').classList.remove('hidden');
+            }
+        }
+
+        function submitPaypalOrder() {
+            const message = `مرحباً، أود طلب خدمة فتح حساب بايبال (الرسوم: 50$ / ما يعادل 302,500 SDG). لقد قمت بتحويل المبلغ عبر USDT وهذا هو إيصال الدفع المرفق.`;
+            const whatsappUrl = `https://wa.me/249904252568?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
+        function selectPaypalLocalPayment() {
+            closePaypalPaymentMethodModal();
+            document.querySelectorAll('#paypal-local-gateway-modal .payment-method-card').forEach(el => el.classList.remove('active-method'));
+            document.getElementById('paypal-local-receipt-section').classList.add('hidden');
+            document.getElementById('btn-paypal-local-done').classList.add('hidden');
+            document.getElementById('paypal-local-gateway-modal').classList.remove('hidden');
+        }
+
+        function closePaypalLocalGateway() {
+            document.getElementById('paypal-local-gateway-modal').classList.add('hidden');
+        }
+
+        let selectedPaypalLocalOption = '';
+        function togglePaypalLocalCard(methodName) {
+            selectedPaypalLocalOption = methodName;
+            document.querySelectorAll('#paypal-local-gateway-modal .payment-method-card').forEach(card => {
+                card.classList.remove('active-method');
+            });
+            let activeCardId = '';
+            if(methodName === 'بنكك') activeCardId = 'p-card-bonk';
+            if(methodName === 'فوري') activeCardId = 'p-card-fawry';
+            if(methodName === 'اووكاش') activeCardId = 'p-card-owocash';
+            if(methodName === 'ماي كاشي') activeCardId = 'p-card-mycashi';
+
+            const selectedCard = document.getElementById(activeCardId);
+            if(selectedCard) {
+                selectedCard.classList.add('active-method');
+            }
+            document.getElementById('paypal-local-receipt-section').classList.remove('hidden');
+        }
+
+        function handlePaypalLocalReceiptSelected(event) {
+            if (event.target.files && event.target.files[0]) {
+                document.getElementById('paypal-local-receipt-label').innerText = "✓ تم إرفاق الإيصال بنجاح (تغيير)";
+                document.getElementById('btn-paypal-local-done').classList.remove('hidden');
+            }
+        }
+
+        function submitPaypalLocalOrder() {
+            if (!selectedPaypalLocalOption) {
+                alert('الرجاء تحديد طريقة الدفع أولاً');
+                return;
+            }
+            const message = `مرحباً، أود طلب خدمة فتح حساب بايبال (الرسوم: 50$ / ما يعادل 302,500 SDG). طريقة الدفع: ${selectedPaypalLocalOption}. لقد قمت بتحويل المبلغ وهذا هو إيصال الدفع المرفق.`;
+            const whatsappUrl = `https://wa.me/249904252568?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
+        /* دوال خدمة فتح حساب إكسنيس (Exness) */
+        function openExnessServiceModal() {
+            document.getElementById('exness-service-modal').classList.remove('hidden');
+        }
+
+        function closeExnessServiceModal() {
+            document.getElementById('exness-service-modal').classList.add('hidden');
+        }
+
+        function proceedFromExnessToPayment() {
+            closeExnessServiceModal();
+            document.getElementById('exness-payment-method-modal').classList.remove('hidden');
+        }
+
+        function closeExnessPaymentMethodModal() {
+            document.getElementById('exness-payment-method-modal').classList.add('hidden');
+        }
+
+        function selectExnessUsdtPayment() {
+            closeExnessPaymentMethodModal();
+            document.getElementById('exness-receipt-label').innerText = "إرفاق إيصال الدفع";
+            document.getElementById('btn-exness-done').classList.add('hidden');
+            document.getElementById('exness-receipt-input').value = "";
+            document.getElementById('exness-usdt-gateway-modal').classList.remove('hidden');
+        }
+
+        function closeExnessUsdtGateway() {
+            document.getElementById('exness-usdt-gateway-modal').classList.add('hidden');
+        }
+
+        function handleExnessReceiptSelected(event) {
+            if (event.target.files && event.target.files[0]) {
+                document.getElementById('exness-receipt-label').innerText = "✓ تم إرفاق الإيصال بنجاح (تغيير)";
+                document.getElementById('btn-exness-done').classList.remove('hidden');
+            }
+        }
+
+        function submitExnessOrder() {
+            const message = `مرحباً، أود طلب خدمة فتح حساب إكسنيس (الرسوم: 30$ / ما يعادل 181,500 SDG). لقد قمت بتحويل المبلغ عبر USDT وهذا هو إيصال الدفع المرفق.`;
+            const whatsappUrl = `https://wa.me/249904252568?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
+        function selectExnessLocalPayment() {
+            closeExnessPaymentMethodModal();
+            document.querySelectorAll('#exness-local-gateway-modal .payment-method-card').forEach(el => el.classList.remove('active-method'));
+            document.getElementById('exness-local-receipt-section').classList.add('hidden');
+            document.getElementById('btn-exness-local-done').classList.add('hidden');
+            document.getElementById('exness-local-gateway-modal').classList.remove('hidden');
+        }
+
+        function closeExnessLocalGateway() {
+            document.getElementById('exness-local-gateway-modal').classList.add('hidden');
+        }
+
+        let selectedExnessLocalOption = '';
+        function toggleExnessLocalCard(methodName) {
+            selectedExnessLocalOption = methodName;
+            document.querySelectorAll('#exness-local-gateway-modal .payment-method-card').forEach(card => {
+                card.classList.remove('active-method');
+            });
+            let activeCardId = '';
+            if(methodName === 'بنكك') activeCardId = 'ex-card-bonk';
+            if(methodName === 'فوري') activeCardId = 'ex-card-fawry';
+            if(methodName === 'اووكاش') activeCardId = 'ex-card-owocash';
+            if(methodName === 'ماي كاشي') activeCardId = 'ex-card-mycashi';
+
+            const selectedCard = document.getElementById(activeCardId);
+            if(selectedCard) {
+                selectedCard.classList.add('active-method');
+            }
+            document.getElementById('exness-local-receipt-section').classList.remove('hidden');
+        }
+
+        function handleExnessLocalReceiptSelected(event) {
+            if (event.target.files && event.target.files[0]) {
+                document.getElementById('exness-local-receipt-label').innerText = "✓ تم إرفاق الإيصال بنجاح (تغيير)";
+                document.getElementById('btn-exness-local-done').classList.remove('hidden');
+            }
+        }
+
+        function submitExnessLocalOrder() {
+            if (!selectedExnessLocalOption) {
+                alert('الرجاء تحديد طريقة الدفع أولاً');
+                return;
+            }
+            const message = `مرحباً، أود طلب خدمة فتح حساب إكسنيس (الرسوم: 30$ / ما يعادل 181,500 SDG). طريقة الدفع: ${selectedExnessLocalOption}. لقد قمت بتحويل المبلغ وهذا هو إيصال الدفع المرفق.`;
+            const whatsappUrl = `https://wa.me/249904252568?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
         }
 
         function handleKycFileUpload(event) {
@@ -828,6 +1664,36 @@
             document.getElementById('successOverlay').classList.remove('active');
             const activeModals = document.querySelectorAll('.modal-overlay');
             activeModals.forEach(modal => modal.classList.add('hidden'));
+        }
+
+        function uploadAvatar(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const avatarImg = document.getElementById('user-avatar-img');
+                    const modalAvatarImg = document.getElementById('modal-user-img');
+                    if(avatarImg) avatarImg.src = e.target.result;
+                    if(modalAvatarImg) modalAvatarImg.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function openProfileModal() {
+            document.getElementById('profile-modal').classList.remove('hidden');
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profile-modal').classList.add('hidden');
+        }
+
+        function openVerificationModal() {
+            document.getElementById('verification-modal').classList.remove('hidden');
+        }
+
+        function closeVerificationModal() {
+            document.getElementById('verification-modal').classList.add('hidden');
         }
     </script>
 </body>

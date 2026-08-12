@@ -16,6 +16,8 @@ let currentUser = {
 
 let generatedOTP = "";
 let activeCameraStream = null;
+let selectedPaymentMethod = "";
+let uploadedReceiptData = null;
 
 // نظام إشعارات عصري احترافي
 function showToast(message, type = 'success') {
@@ -153,7 +155,6 @@ function closeVerificationModal() {
 }
 
 async function triggerAppCamera() {
-    // فتح نافذة اختيار ملفات الصور من الجهاز مباشرة بدلاً من تشغيل الكاميرا
     let fileInput = document.getElementById('verification-file-input');
     if (!fileInput) {
         fileInput = document.createElement('input');
@@ -351,28 +352,28 @@ function confirmInvestmentAmount() {
 
 function showPaymentDetailsModal(planType, amount) {
     let paymentHTML = `
-        <div id="payment-modal" class="screen active modal-overlay" style="display:flex !important;">
-            <div class="modal-card" style="max-width: 400px; text-align: right;">
-                <button class="close-modal" onclick="closePaymentModal()"><ion-icon name="close"></ion-icon></button>
-                <h3 class="modal-title" style="text-align: center; margin-bottom: 4px;">تفاصيل الدفع الرقمي</h3>
-                <span class="modal-phone" style="text-align: center;">الخطة: <b>${planType}</b> | المبلغ: <b>${amount} USDT</b></span>
+        <div id="payment-modal" class="screen active modal-overlay" style="display:flex !important; align-items:center; justify-content:center; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; overflow-y:auto; padding:20px;">
+            <div class="modal-card" style="background:var(--card-bg, #ffffff); color:var(--text-main, #111827); width:100%; max-width:425px; border-radius:20px; padding:20px; text-align:right; box-shadow:0 15px 35px rgba(0,0,0,0.2); position:relative;">
+                <button class="close-modal" onclick="closePaymentModal()" style="position:absolute; top:15px; left:15px; background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-secondary);"><ion-icon name="close"></ion-icon></button>
+                <h3 class="modal-title" style="text-align: center; margin-bottom: 4px; font-size:18px;">تفاصيل الدفع الرقمي</h3>
+                <span class="modal-phone" style="text-align: center; display:block; font-size:13px; color:var(--text-secondary); margin-bottom:15px;">الخطة: <b>${planType}</b> | المبلغ: <b>${amount} USDT</b></span>
                 
-                <div style="background:var(--btn-icon-bg); padding:10px; border-radius:10px; margin-bottom:10px; font-size:12px; border:1px solid var(--card-border);">
+                <div style="background:var(--btn-icon-bg, #f3f4f6); padding:10px; border-radius:10px; margin-bottom:10px; font-size:12px; border:1px solid var(--card-border, #e5e7eb);">
                     <p style="margin-bottom:4px; font-weight:bold;">1. Binance ID:</p>
                     <p style="user-select:all; background:var(--card-bg); padding:6px; border-radius:6px; text-align:center; font-family:monospace;">1268802737</p>
                 </div>
 
-                <div style="background:var(--btn-icon-bg); padding:10px; border-radius:10px; margin-bottom:10px; font-size:12px; border:1px solid var(--card-border);">
+                <div style="background:var(--btn-icon-bg, #f3f4f6); padding:10px; border-radius:10px; margin-bottom:10px; font-size:12px; border:1px solid var(--card-border, #e5e7eb);">
                     <p style="margin-bottom:4px; font-weight:bold;">2. شبكة TRC20:</p>
                     <p style="user-select:all; background:var(--card-bg); padding:6px; border-radius:6px; text-align:center; font-size:11px; font-family:monospace; word-break:break-all;">TPcsk7uJmPcK4oLjnbsnNiJKW1bDDxU1gF</p>
                 </div>
 
-                <div style="background:var(--btn-icon-bg); padding:10px; border-radius:10px; margin-bottom:14px; font-size:12px; border:1px solid var(--card-border);">
+                <div style="background:var(--btn-icon-bg, #f3f4f6); padding:10px; border-radius:10px; margin-bottom:14px; font-size:12px; border:1px solid var(--card-border, #e5e7eb);">
                     <p style="margin-bottom:4px; font-weight:bold;">3. شبكة BEP20:</p>
                     <p style="user-select:all; background:var(--card-bg); padding:6px; border-radius:6px; text-align:center; font-size:11px; font-family:monospace; word-break:break-all;">0x520a001683acb8758c39e35652bb71e695ff434e</p>
                 </div>
 
-                <button onclick="submitPaymentReceipt('${planType}', ${amount})" class="btn-primary" style="background-color:#10b981; margin-bottom: 8px;">ارفع إيصال الدفع وتأكيد الاشتراك</button>
+                <button onclick="submitPaymentReceipt('${planType}', ${amount})" class="btn-primary" style="background-color:#10b981; color:#fff; width:100%; padding:12px; border:none; border-radius:10px; font-weight:bold; cursor:pointer; margin-bottom: 8px;">ارفع إيصال الدفع وتأكيد الاشتراك</button>
                 <button onclick="closePaymentModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px;">إلغاء</button>
             </div>
         </div>
@@ -408,7 +409,158 @@ function submitPaymentReceipt(planType, amount) {
 }
 
 // ==========================================
-// 5. الوظائف العامة والتنقل
+// 5. نظام شراء USDT وطرق الدفع الجديدة (بنكك، فوري، أووكاش، ماي كاشي)
+// ==========================================
+function openBuyUsdtModal() {
+    if (!currentUser.isVerified) {
+        return showToast('⚠️ تنبيه: يرجى إكمال التحقق من الهوية أولاً للشراء.', 'error');
+    }
+    document.getElementById('buy-amount-input').value = '';
+    document.getElementById('buy-amount-modal').classList.remove('hidden');
+}
+
+function closeBuyAmountModal() {
+    document.getElementById('buy-amount-modal').classList.add('hidden');
+}
+
+function setBuyQuickAmount(val) {
+    document.getElementById('buy-amount-input').value = val;
+}
+
+function proceedToPaymentMethods() {
+    const inputVal = document.getElementById('buy-amount-input').value.trim();
+    const amount = Number(inputVal);
+
+    if (!inputVal || isNaN(amount) || amount <= 0) {
+        return showToast('يرجى إدخال كمية صحيحة من الـ USDT', 'error');
+    }
+
+    currentUser.buyAmount = amount;
+    closeBuyAmountModal();
+    showPaymentMethodsSelectionModal(amount);
+}
+
+function showPaymentMethodsSelectionModal(amount) {
+    selectedPaymentMethod = "";
+    uploadedReceiptData = null;
+
+    let paymentMethodsHTML = `
+        <div id="buy-methods-modal" class="screen active modal-overlay" style="display:flex !important; align-items:center; justify-content:center; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; overflow-y:auto; padding:20px;">
+            <div class="modal-card" style="background:var(--card-bg, #ffffff); color:var(--text-main, #111827); width:100%; max-width:440px; border-radius:20px; padding:20px; text-align:right; box-shadow:0 15px 35px rgba(0,0,0,0.2); position:relative; max-height:90vh; overflow-y:auto;">
+                <button class="close-modal" onclick="closeBuyMethodsModal()" style="position:absolute; top:15px; left:15px; background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-secondary);"><ion-icon name="close"></ion-icon></button>
+                <h3 class="modal-title" style="text-align: center; margin-bottom: 4px; font-size:18px;">حدد طريقة الدفع المفضله لديك 💳</h3>
+                <span class="modal-phone" style="text-align: center; display:block; font-size:13px; color:var(--text-secondary); margin-bottom:15px;">الكمية المطلوبة: <b>${amount} USDT</b></span>
+                
+                <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;">
+                    <!-- بنكك -->
+                    <label onclick="selectMethodOption('بنكك')" style="display:flex; align-items:flex-start; gap:10px; background:var(--btn-icon-bg, #f3f4f6); padding:12px; border-radius:12px; border:2px solid var(--card-border, #e5e7eb); cursor:pointer; transition:0.2s;">
+                        <input type="radio" name="payment_method_choice" value="بنكك" style="margin-top:3px;">
+                        <div style="font-size:13px; width:100%;">
+                            <strong>١/ بنكك</strong><br>
+                            <span style="color:var(--text-secondary);">رقم الحساب:</span> <code style="user-select:all; background:var(--card-bg); padding:2px 6px; border-radius:4px; font-weight:bold;">6885238</code><br>
+                            <span style="color:var(--text-secondary);">الاسم:</span> مصطفى ادم
+                        </div>
+                    </label>
+
+                    <!-- فوري -->
+                    <label onclick="selectMethodOption('فوري')" style="display:flex; align-items:flex-start; gap:10px; background:var(--btn-icon-bg, #f3f4f6); padding:12px; border-radius:12px; border:2px solid var(--card-border, #e5e7eb); cursor:pointer; transition:0.2s;">
+                        <input type="radio" name="payment_method_choice" value="فوري" style="margin-top:3px;">
+                        <div style="font-size:13px; width:100%;">
+                            <strong>٢/ فوري</strong><br>
+                            <span style="color:var(--text-secondary);">رقم الحساب:</span> <code style="user-select:all; background:var(--card-bg); padding:2px 6px; border-radius:4px; font-weight:bold;">52204397</code><br>
+                            <span style="color:var(--text-secondary);">الاسم:</span> مصطفي ادم
+                        </div>
+                    </label>
+
+                    <!-- اووكاش -->
+                    <label onclick="selectMethodOption('اووكاش')" style="display:flex; align-items:flex-start; gap:10px; background:var(--btn-icon-bg, #f3f4f6); padding:12px; border-radius:12px; border:2px solid var(--card-border, #e5e7eb); cursor:pointer; transition:0.2s;">
+                        <input type="radio" name="payment_method_choice" value="اووكاش" style="margin-top:3px;">
+                        <div style="font-size:13px; width:100%;">
+                            <strong>٣/ اووكاش</strong><br>
+                            <span style="color:var(--text-secondary);">رقم الحساب:</span> <code style="user-select:all; background:var(--card-bg); padding:2px 6px; border-radius:4px; font-weight:bold;">1811805</code><br>
+                            <span style="color:var(--text-secondary);">الاسم:</span> مصطفى ادم
+                        </div>
+                    </label>
+
+                    <!-- ماي كاشي -->
+                    <label onclick="selectMethodOption('ماي كاشي')" style="display:flex; align-items:flex-start; gap:10px; background:var(--btn-icon-bg, #f3f4f6); padding:12px; border-radius:12px; border:2px solid var(--card-border, #e5e7eb); cursor:pointer; transition:0.2s;">
+                        <input type="radio" name="payment_method_choice" value="ماي كاشي" style="margin-top:3px;">
+                        <div style="font-size:13px; width:100%;">
+                            <strong>٤/ ماي كاشي</strong><br>
+                            <span style="color:var(--text-secondary);">رقم الحساب:</span> <code style="user-select:all; background:var(--card-bg); padding:2px 6px; border-radius:4px; font-weight:bold;">400700101</code><br>
+                            <span style="color:var(--text-secondary);">الاسم:</span> مصطفى ادم
+                        </div>
+                    </label>
+                </div>
+
+                <!-- خانة إرفاق الإشعار وزر تم الدفع -->
+                <div id="receipt-section" style="display:none; flex-direction:column; gap:10px; margin-bottom:15px; border-top:1px dashed var(--card-border); padding-top:12px;">
+                    <label style="font-size:13px; font-weight:bold;">ارفاق اشعار الدفع هنا:</label>
+                    <input type="file" id="payment-receipt-file" accept="image/*" onchange="handleReceiptUpload(event)" style="font-size:12px; padding:8px; border:1px solid var(--card-border); border-radius:8px; background:var(--card-bg); width:100%;">
+                    <div id="receipt-preview-text" style="font-size:11px; color:#10b981; font-weight:bold;"></div>
+                    
+                    <button id="paid-confirmation-btn" onclick="finalizeBuyOrder()" class="btn-primary" style="background-color:#10b981; color:#fff; width:100%; padding:12px; border:none; border-radius:10px; font-weight:bold; cursor:pointer; margin-top:5px; display:none;">تم الدفع</button>
+                </div>
+
+                <button onclick="closeBuyMethodsModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px;">إلغاء</button>
+            </div>
+        </div>
+    `;
+
+    let wrapper = document.getElementById('dynamic-buy-methods-wrapper');
+    if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.id = 'dynamic-buy-methods-wrapper';
+        document.body.appendChild(wrapper);
+    }
+    wrapper.innerHTML = paymentMethodsHTML;
+}
+
+function selectMethodOption(methodName) {
+    selectedPaymentMethod = methodName;
+    const receiptSection = document.getElementById('receipt-section');
+    if (receiptSection) {
+        receiptSection.style.display = 'flex';
+    }
+}
+
+function handleReceiptUpload(event) {
+    const file = event.target.files[0];
+    if (file) {
+        uploadedReceiptData = file.name;
+        const previewText = document.getElementById('receipt-preview-text');
+        const paidBtn = document.getElementById('paid-confirmation-btn');
+        if (previewText) previewText.innerText = `✔ تم إرفاق الملف: ${file.name}`;
+        if (paidBtn) paidBtn.style.display = 'block';
+        showToast("تم إرفاق الإشعار بنجاح");
+    }
+}
+
+function closeBuyMethodsModal() {
+    const wrapper = document.getElementById('dynamic-buy-methods-wrapper');
+    if (wrapper) wrapper.innerHTML = '';
+}
+
+function finalizeBuyOrder() {
+    if (!selectedPaymentMethod) {
+        return showToast('يرجى اختيار طريقة الدفع أولاً', 'error');
+    }
+    if (!uploadedReceiptData) {
+        return showToast('يرجى إرفاق إشعار الدفع أولاً', 'error');
+    }
+
+    closeBuyMethodsModal();
+
+    const phoneNumber = "249904252568";
+    const message = `مرحباً، لقد قمت بشراء وتحويل مبلغ عبر طريقة الدفع:\nطريقة الدفع: [ ${selectedPaymentMethod} ]\nالكمية: ${currentUser.buyAmount} USDT\nاسم العميل: ${currentUser.name}\nرقم الهاتف: ${currentUser.phone}\nتم إرفاق الإشعار بنجاح.`;
+    const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    
+    window.open(whatsappURL, '_blank');
+    showToast("تم إرسال تفاصيل الطلب وتوجيهك إلى واتساب بنجاح!");
+}
+
+// ==========================================
+// 6. الوظائف العامة والتنقل
 // ==========================================
 function updatePlatformLiquidity() {
     const usdtElem = document.getElementById('usdt-balance');

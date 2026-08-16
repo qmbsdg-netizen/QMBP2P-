@@ -317,6 +317,43 @@
         .payment-method-card.active-method .payment-method-header ion-icon {
             transform: rotate(180deg);
         }
+
+        .payment-note-box {
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .amount-conversion-display {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: #2563eb;
+            background: rgba(37, 99, 235, 0.06);
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            border-radius: 10px;
+            padding: 8px;
+            margin-top: 10px;
+            margin-bottom: 4px;
+        }
+
+        .amount-conversion-display.dual {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            text-align: center;
+        }
+
+        .amount-conversion-display.dual span {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -903,7 +940,12 @@
 
             <div class="amount-input-group-3d">
                 <span class="currency-tag-3d">USDT</span>
-                <input type="number" id="big-quantity-input" placeholder="1000" min="1000" step="any">
+                <input type="number" id="big-quantity-input" placeholder="1000" min="1000" step="any" oninput="updateBigConversion()">
+            </div>
+
+            <div class="amount-conversion-display dual">
+                <span id="big-sdg-buy">شراء ≈ 0 SDG</span>
+                <span id="big-sdg-sell">بيع ≈ 0 SDG</span>
             </div>
 
             <div class="amount-quick-chips">
@@ -940,8 +982,10 @@
 
             <div class="amount-input-group-3d">
                 <span class="currency-tag-3d">USDT</span>
-                <input type="number" id="buy-quantity-input" placeholder="0.00" min="1" step="any">
+                <input type="number" id="buy-quantity-input" placeholder="0.00" min="1" step="any" oninput="updateBuyConversion()">
             </div>
+
+            <div class="amount-conversion-display" id="buy-sdg-conversion">≈ 0 SDG</div>
 
             <div class="amount-quick-chips">
                 <button type="button" onclick="setBuyQuickAmount(100)">100</button>
@@ -971,8 +1015,10 @@
 
             <div class="amount-input-group-3d">
                 <span class="currency-tag-3d">USDT</span>
-                <input type="number" id="sell-quantity-input" placeholder="0.00" min="1" step="any">
+                <input type="number" id="sell-quantity-input" placeholder="0.00" min="1" step="any" oninput="updateSellConversion()">
             </div>
+
+            <div class="amount-conversion-display" id="sell-sdg-conversion">≈ 0 SDG</div>
 
             <div class="amount-quick-chips">
                 <button type="button" onclick="setSellQuickAmount(100)">100</button>
@@ -996,6 +1042,8 @@
                 <h3>اختر طريقة الدفع المفضلة 💳</h3>
                 <p style="font-size: 12px; color: var(--text-secondary);">العملية: <strong id="display-buy-type" style="color: var(--text-main);">شراء USDT</strong> | الكمية: <strong id="display-buy-qty" style="color: var(--text-main);">0</strong> USDT</p>
             </div>
+
+            <div class="payment-note-box">ملاحظه❗ الرجاء الكتابه علي تعليق الأشعار *مقابل خدمه مكتلمه من مصطفي*</div>
 
             <div class="payment-methods-grid">
                 <div class="payment-method-card" id="card-bonk" onclick="togglePaymentCard('بنكك')">
@@ -1261,6 +1309,31 @@
 
         function setBigQuickAmount(val) {
             document.getElementById('big-quantity-input').value = val;
+            updateBigConversion();
+        }
+
+        /* التحويل التلقائي بين USDT و SDG */
+        const USDT_BUY_RATE_SDG = 6100;
+        const USDT_SELL_RATE_SDG = 5910;
+
+        function formatSDG(value) {
+            return Math.round(value).toLocaleString('en-US');
+        }
+
+        function updateBuyConversion() {
+            const qty = parseFloat(document.getElementById('buy-quantity-input').value) || 0;
+            document.getElementById('buy-sdg-conversion').innerText = `≈ ${formatSDG(qty * USDT_BUY_RATE_SDG)} SDG`;
+        }
+
+        function updateSellConversion() {
+            const qty = parseFloat(document.getElementById('sell-quantity-input').value) || 0;
+            document.getElementById('sell-sdg-conversion').innerText = `≈ ${formatSDG(qty * USDT_SELL_RATE_SDG)} SDG`;
+        }
+
+        function updateBigConversion() {
+            const qty = parseFloat(document.getElementById('big-quantity-input').value) || 0;
+            document.getElementById('big-sdg-buy').innerText = `شراء ≈ ${formatSDG(qty * USDT_BUY_RATE_SDG)} SDG`;
+            document.getElementById('big-sdg-sell').innerText = `بيع ≈ ${formatSDG(qty * USDT_SELL_RATE_SDG)} SDG`;
         }
 
         let currentBuyQuantity = 0;
@@ -1317,6 +1390,7 @@
 
         function setBuyQuickAmount(val) {
             document.getElementById('buy-quantity-input').value = val;
+            updateBuyConversion();
         }
 
         function proceedToBuyPaymentGateway() {
@@ -1409,6 +1483,7 @@
 
         function setSellQuickAmount(val) {
             document.getElementById('sell-quantity-input').value = val;
+            updateSellConversion();
         }
 
         function proceedToPaymentGateway() {

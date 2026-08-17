@@ -179,6 +179,7 @@
         .service-card.exness .s-icon { background: linear-gradient(135deg, #FF5500, #CC3300); color: #ffffff; }
         .service-card.card-visa .s-icon { background: linear-gradient(135deg, #1A1F71, #0056b3); color: #f79e1b; }
         .service-card.games .s-icon { background: linear-gradient(135deg, #8B5CF6, #6D28D9); color: #ffffff; }
+        .service-card.intl-transfers .s-icon { background: linear-gradient(135deg, #0284C7, #0369A1); color: #ffffff; }
         .service-card.bank-issues .s-icon { background: linear-gradient(135deg, #059669, #047857); color: #ffffff; }
 
         .profile-modal-content {
@@ -354,6 +355,44 @@
         .amount-conversion-display.dual span {
             flex: 1;
         }
+
+        .custom-select-3d {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 12px;
+            border: 1.5px solid var(--card-border, #e5e7eb);
+            background: var(--card-bg-sub, #f9fafb);
+            color: var(--text-main, #111827);
+            font-size: 14px;
+            font-weight: 600;
+            outline: none;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .custom-select-3d:focus {
+            border-color: #2563eb;
+        }
+
+        .custom-input-3d {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 12px;
+            border: 1.5px solid var(--card-border, #e5e7eb);
+            background: var(--card-bg-sub, #f9fafb);
+            color: var(--text-main, #111827);
+            font-size: 13px;
+            outline: none;
+            margin-top: 6px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        .custom-input-3d:focus {
+            border-color: #2563eb;
+        }
     </style>
 </head>
 <body>
@@ -393,7 +432,7 @@
             </div>
 
             <div id="top-kyc-btn-wrapper">
-                <button id="top-verification-btn" class="binance-verify-pill" onclick="openVerificationModal()">
+                <button id="top-verification-btn" class="binance-verify-pill" onclick="openVerificationModal()" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;">
                     <ion-icon name="shield-checkmark-outline"></ion-icon>
                     <span id="top-verify-text">إكمال التحقق</span>
                 </button>
@@ -547,6 +586,15 @@
                     <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
                 </div>
 
+                <div class="service-card intl-transfers" onclick="openIntlTransferModal()">
+                    <div class="s-icon"><ion-icon name="globe-outline"></ion-icon></div>
+                    <div class="s-info">
+                        <h4>التحويلات الدولية</h4>
+                        <p>تحويل الأموال فورياً إلى جميع الدول العربية</p>
+                    </div>
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                </div>
+
                 <div class="service-card bank-issues" onclick="openGenericServiceModal('حل مشاكل الحسابات', 'مساعدة واستشارات فنيه وتذليل العقبات لتسوية المعاملات والحسابات المتروكة.')">
                     <div class="s-icon"><ion-icon name="build-outline"></ion-icon></div>
                     <div class="s-info">
@@ -557,6 +605,140 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- نافذة قسم التحويلات الدولية المعدلة -->
+    <div id="intl-transfer-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; max-height: 90vh; overflow-y: auto; text-align: right;">
+            <button class="close-modal" onclick="closeIntlTransferModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="text-align: center; margin-bottom: 15px;">
+                <div class="modal-icon-badge" style="background: linear-gradient(135deg, #0284C7, #0369A1); color: white;">
+                    <ion-icon name="globe-outline"></ion-icon>
+                </div>
+                <h3>التحويلات الدولية</h3>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;">حدد الدولة وأدخل كافة البيانات المطلوبة لإتمام معاملة التحويل</p>
+            </div>
+
+            <!-- خطوة 1: اختيار الدولة -->
+            <div id="intl-step-country" style="margin-bottom: 15px;">
+                <label style="font-size: 13px; font-weight: bold; color: var(--text-main);">اختر الدولة:</label>
+                <select id="country-select" class="custom-select-3d" onchange="onIntlCountrySelected()">
+                    <option value="" disabled selected>-- اختر الدولة العربية --</option>
+                    <option value="السودان">🇸🇩 السودان</option>
+                    <option value="مصر">🇪🇬 مصر</option>
+                    <option value="المملكة العربية السعودية">🇸🇦 المملكة العربية السعودية</option>
+                    <option value="الإمارات العربية المتحدة">🇦🇪 الإمارات العربية المتحدة</option>
+                    <option value="قطر">🇶🇦 قطر</option>
+                    <option value="الكويت">🇰🇼 الكويت</option>
+                    <option value="سلطنة عمان">🇴🇲 سلطنة عمان</option>
+                    <option value="البحرين">🇧🇭 البحرين</option>
+                    <option value="الأردن">🇯🇴 الأردن</option>
+                    <option value="العراق">🇮🇶 العراق</option>
+                    <option value="لبنان">🇱🇧 لبنان</option>
+                    <option value="فلسطين">🇵🇸 فلسطين</option>
+                    <option value="سوريا">🇸🇾 سوريا</option>
+                    <option value="اليمن">🇾🇪 اليمن</option>
+                    <option value="المغرب">🇲🇦 المغرب</option>
+                    <option value="الجزائر">🇩🇿 الجزائر</option>
+                    <option value="تونس">🇹🇳 تونس</option>
+                    <option value="ليبيا">🇱🇾 ليبيا</option>
+                    <option value="موريتانيا">🇲🇷 موريتانيا</option>
+                    <option value="الصومال">🇸🇴 الصومال</option>
+                    <option value="جيبوتي">🇩🇯 جيبوتي</option>
+                    <option value="جزر القمر">🇰🇲 جزر القمر</option>
+                </select>
+            </div>
+
+            <!-- خطوة 2: نموذج إدخال التفاصيل وطريقة الدفع (تفتح بعد اختيار الدولة) -->
+            <div id="intl-step-details" class="hidden">
+                <!-- المبلغ المراد إرساله -->
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-main);">المبلغ المراد إرساله:</label>
+                    <input type="number" id="intl-amount" placeholder="أدخل المبلغ" class="custom-input-3d">
+                </div>
+
+                <!-- اختيار طريقة الدفع المحلية -->
+                <label style="font-size: 12px; font-weight: bold; color: var(--text-main); display: block; margin-bottom: 5px;">طريقة الدفع المحلية (بيانات حساباتي):</label>
+                <div class="payment-methods-grid" style="margin-top: 5px; margin-bottom: 15px;">
+                    <div class="payment-method-card" id="intl-card-bonk" onclick="toggleIntlLocalCard('بنكك')">
+                        <div class="payment-method-header">
+                            <span>بنكك</span>
+                            <ion-icon name="chevron-down-outline"></ion-icon>
+                        </div>
+                        <div class="payment-details-box">
+                            رقم الحساب: <code>6885238</code><br>
+                            الاسم: مصطفى ادم
+                        </div>
+                    </div>
+
+                    <div class="payment-method-card" id="intl-card-fawry" onclick="toggleIntlLocalCard('فوري')">
+                        <div class="payment-method-header">
+                            <span>فوري</span>
+                            <ion-icon name="chevron-down-outline"></ion-icon>
+                        </div>
+                        <div class="payment-details-box">
+                            رقم الحساب: <code>52204397</code><br>
+                            الاسم: مصطفي ادم
+                        </div>
+                    </div>
+
+                    <div class="payment-method-card" id="intl-card-owocash" onclick="toggleIntlLocalCard('اووكاش')">
+                        <div class="payment-method-header">
+                            <span>اووكاش</span>
+                            <ion-icon name="chevron-down-outline"></ion-icon>
+                        </div>
+                        <div class="payment-details-box">
+                            رقم الحساب: <code>1811805</code><br>
+                            الاسم: مصطفى ادم
+                        </div>
+                    </div>
+
+                    <div class="payment-method-card" id="intl-card-mycashi" onclick="toggleIntlLocalCard('ماي كاشي')">
+                        <div class="payment-method-header">
+                            <span>ماي كاشي</span>
+                            <ion-icon name="chevron-down-outline"></ion-icon>
+                        </div>
+                        <div class="payment-details-box">
+                            رقم الحساب: <code>400700101</code><br>
+                            الاسم: مصطفى ادم
+                        </div>
+                    </div>
+                </div>
+
+                <!-- بيانات المرسل والمستلم -->
+                <div style="background: var(--card-bg-sub, #f9fafb); padding: 12px; border-radius: 12px; border: 1px solid var(--card-border, #e5e7eb); margin-bottom: 15px;">
+                    <h4 style="font-size: 13px; color: var(--text-main); margin-bottom: 8px; border-bottom: 1px solid var(--card-border); padding-bottom: 4px;">بيانات التحويل</h4>
+                    
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">اسم المرسل:</label>
+                    <input type="text" id="intl-sender-name" placeholder="الاسم الكامل للمرسل" class="custom-input-3d">
+
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">رقم هاتف المرسل:</label>
+                    <input type="tel" id="intl-sender-phone" placeholder="رقم هاتف المرسل" class="custom-input-3d">
+
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">اسم المستلم:</label>
+                    <input type="text" id="intl-receiver-name" placeholder="الاسم الكامل للمستلم" class="custom-input-3d">
+
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">رقم هاتف المستلم:</label>
+                    <input type="tel" id="intl-receiver-phone" placeholder="رقم هاتف المستلم" class="custom-input-3d">
+
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">عنوان المستلم:</label>
+                    <input type="text" id="intl-receiver-address" placeholder="المدينة / العنوان" class="custom-input-3d">
+
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">اسم بنك المستلم:</label>
+                    <input type="text" id="intl-receiver-bank-name" placeholder="اسم البنك التابع للمستلم" class="custom-input-3d">
+
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">رقم حساب بنك المستلم:</label>
+                    <input type="text" id="intl-receiver-bank-account" placeholder="رقم حساب بنك المستلم" class="custom-input-3d" style="margin-bottom:0;">
+                </div>
+
+                <button onclick="submitIntlTransferToWhatsapp()" class="btn-primary-3d" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 14px; font-size: 15px; width:100%;">
+                    <span>متابعة المعاملة عبر الواتساب</span>
+                    <ion-icon name="logo-whatsapp"></ion-icon>
+                </button>
+            </div>
+
+            <button onclick="closeIntlTransferModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
     </div>
 
     <!-- نافذة تفاصيل الخدمات المباشرة العامة -->
@@ -821,9 +1003,7 @@
 
             <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--card-border, #e5e7eb);">
                 <span style="font-size: 11px; color: var(--text-secondary); display: block;">Binance ID</span>
-                <strong style="font-size: 13px; color: var(--text-main); user-select: all;">1103631387
-                
-              </strong>
+                <strong style="font-size: 13px; color: var(--text-main); user-select: all;">1103631387</strong>
             </div>
 
             <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--card-border, #e5e7eb);">
@@ -1158,7 +1338,7 @@
                     <ion-icon name="cloud-upload-outline"></ion-icon>
                 </div>
                 <h3>توثيق الهوية (KYC)</h3>
-                <p>اختر صورة مستندك الرسمي أو صورتك الشخصية للتحقق الفوري</p>
+                <p>ارفع صورة مستندك الرسمي للتحقق من هويتك</p>
             </div>
 
             <div class="kyc-warning-box">
@@ -1167,7 +1347,7 @@
 
             <label for="kyc-file-upload-input" class="btn-primary-3d" style="margin-bottom: 10px; background: linear-gradient(135deg, #2563eb, #1d4ed8); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 14px; border-radius: 12px; font-weight: bold;">
                 <ion-icon name="image-outline" style="font-size: 20px;"></ion-icon>
-                <span>رفع صورة التحقق من الجهاز</span>
+                <span>رفع مستند الهوية من الجهاز</span>
             </label>
             <input type="file" id="kyc-file-upload-input" accept="image/*" style="display: none;" onchange="handleKycFileUpload(event)">
 
@@ -1282,7 +1462,8 @@
             const topVerificationBtn = document.getElementById('top-verification-btn');
             const accountStatusText = document.getElementById('account-status-text');
 
-            if (verified) {
+            // لا تظهر أي علامة "حساب موثق" إلا بعد رفع مستند الهوية بنجاح.
+            if (verified === true) {
                 if (topVerifyText) topVerifyText.innerText = "حساب موثق";
                 if (topVerificationBtn) {
                     topVerificationBtn.style.background = "linear-gradient(135deg, #10b981, #059669)";
@@ -1291,6 +1472,10 @@
                 if (accountStatusText) accountStatusText.innerHTML = "موثق ✅";
             } else {
                 if (topVerifyText) topVerifyText.innerText = "إكمال التحقق";
+                if (topVerificationBtn) {
+                    topVerificationBtn.style.background = "linear-gradient(135deg, #ef4444, #dc2626)";
+                    topVerificationBtn.style.color = "#ffffff";
+                }
                 if (accountStatusText) accountStatusText.innerHTML = "غير موثق ❌";
             }
         }
@@ -1521,6 +1706,93 @@
             window.location.href = whatsappUrl;
         }
 
+        /* دوال خدمة التحويلات الدولية المعدلة */
+        let selectedIntlLocalOption = '';
+
+        function openIntlTransferModal() {
+            document.getElementById('country-select').value = "";
+            document.getElementById('intl-step-details').classList.add('hidden');
+            document.getElementById('intl-amount').value = "";
+            document.getElementById('intl-sender-name').value = "";
+            document.getElementById('intl-sender-phone').value = "";
+            document.getElementById('intl-receiver-name').value = "";
+            document.getElementById('intl-receiver-phone').value = "";
+            document.getElementById('intl-receiver-address').value = "";
+            document.getElementById('intl-receiver-bank-name').value = "";
+            document.getElementById('intl-receiver-bank-account').value = "";
+            selectedIntlLocalOption = '';
+            document.querySelectorAll('#intl-transfer-modal .payment-method-card').forEach(el => el.classList.remove('active-method'));
+            document.getElementById('intl-transfer-modal').classList.remove('hidden');
+        }
+
+        function closeIntlTransferModal() {
+            document.getElementById('intl-transfer-modal').classList.add('hidden');
+        }
+
+        function onIntlCountrySelected() {
+            const country = document.getElementById('country-select').value;
+            if (country) {
+                document.getElementById('intl-step-details').classList.remove('hidden');
+            }
+        }
+
+        function toggleIntlLocalCard(methodName) {
+            selectedIntlLocalOption = methodName;
+            document.querySelectorAll('#intl-transfer-modal .payment-method-card').forEach(card => {
+                card.classList.remove('active-method');
+            });
+            let activeCardId = '';
+            if(methodName === 'بنكك') activeCardId = 'intl-card-bonk';
+            if(methodName === 'فوري') activeCardId = 'intl-card-fawry';
+            if(methodName === 'اووكاش') activeCardId = 'intl-card-owocash';
+            if(methodName === 'ماي كاشي') activeCardId = 'intl-card-mycashi';
+
+            const selectedCard = document.getElementById(activeCardId);
+            if(selectedCard) {
+                selectedCard.classList.add('active-method');
+            }
+        }
+
+        function submitIntlTransferToWhatsapp() {
+            const selectedCountry = document.getElementById('country-select').value;
+            const amount = document.getElementById('intl-amount').value;
+            const senderName = document.getElementById('intl-sender-name').value;
+            const senderPhone = document.getElementById('intl-sender-phone').value;
+            const receiverName = document.getElementById('intl-receiver-name').value;
+            const receiverPhone = document.getElementById('intl-receiver-phone').value;
+            const receiverAddress = document.getElementById('intl-receiver-address').value;
+            const receiverBankName = document.getElementById('intl-receiver-bank-name').value;
+            const receiverBankAccount = document.getElementById('intl-receiver-bank-account').value;
+
+            if (!selectedCountry) {
+                alert('الرجاء اختيار الدولة أولاً');
+                return;
+            }
+            if (!amount) {
+                alert('الرجاء أدخل المبلغ المراد إرساله');
+                return;
+            }
+            if (!selectedIntlLocalOption) {
+                alert('الرجاء اختيار طريقة الدفع المحلية');
+                return;
+            }
+
+            const message = `مرحباً، أود إتمام معاملة تحويل دولي:\n` +
+                `- الدولة المراد التحويل إليها: ${selectedCountry}\n` +
+                `- المبلغ المراد إرساله: ${amount}\n` +
+                `- طريقة الدفع المحلية: ${selectedIntlLocalOption}\n` +
+                `- اسم المرسل: ${senderName}\n` +
+                `- رقم هاتف المرسل: ${senderPhone}\n` +
+                `- اسم المستلم: ${receiverName}\n` +
+                `- رقم هاتف المستلم: ${receiverPhone}\n` +
+                `- عنوان المستلم: ${receiverAddress}\n` +
+                `- اسم بنك المستلم: ${receiverBankName}\n` +
+                `- رقم حساب بنك المستلم: ${receiverBankAccount}`;
+
+            const whatsappUrl = `https://wa.me/249904252568?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
         /* دوال الخدمات العامة المباشرة */
         let activeGenericServiceName = '';
 
@@ -1724,9 +1996,16 @@
         }
 
         function handleKycFileUpload(event) {
-            if (event.target.files && event.target.files[0]) {
-                showSuccess3DModal();
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            // لا يتم اعتماد الحساب لمجرد فتح نافذة التحقق؛ يجب اختيار مستند فعلي.
+            if (!file.type || !file.type.startsWith('image/')) {
+                event.target.value = '';
+                return;
             }
+
+            showSuccess3DModal();
         }
 
         function showSuccess3DModal() {

@@ -9,7 +9,7 @@ let currentUser = {
     avatar: "",
     subscriptions: [],
     email: "",
-    isVerified: false,
+    isVerified: false, // افتراضياً الحساب غير موثق
     selectedInvestment: null,
     investmentAmount: 0
 };
@@ -83,6 +83,9 @@ function checkLoginState() {
     }
 }
 
+// ==========================================
+// تحديث واجهة الملف الشخصي وضبط إظهار شارة التوثيق
+// ==========================================
 function updateUIProfile() {
     const modalNameElem = document.getElementById('modal-user-name');
     const modalPhoneElem = document.getElementById('modal-user-phone');
@@ -101,13 +104,14 @@ function updateUIProfile() {
     const topVerifyText = document.getElementById('top-verify-text');
     const verifyContainer = document.getElementById('verification-status-container');
 
+    // 🎯 لا تظهر علامة التوثيق أعلى الشاشة إلا بعد أن يتم التوثيق بالفعل برفع المستند
     if (topVerifyBtn && topVerifyText) {
         if (currentUser.isVerified) {
+            topVerifyBtn.style.display = "inline-flex"; // إظهار علامة التوثيق
             topVerifyBtn.className = "binance-verify-pill verified-pill";
             topVerifyText.innerHTML = `<ion-icon name="checkmark-seal" style="vertical-align: middle;"></ion-icon> موثق بنجاح`;
         } else {
-            topVerifyBtn.className = "binance-verify-pill";
-            topVerifyText.innerText = "إكمال التحقق";
+            topVerifyBtn.style.display = "none"; // إخفاء الشارة تماماً طالما لم يرفع المستند
         }
     }
 
@@ -116,7 +120,7 @@ function updateUIProfile() {
             verifyContainer.innerHTML = `<p style="color: #10b981; font-weight: bold; text-align: center; font-size: 13px;">✔ الحساب موثق بنجاح</p>`;
         } else {
             verifyContainer.innerHTML = `
-                <button onclick="openVerificationModal()" class="btn-primary" style="background-color: #d97706; margin-top: 10px;">إكمال التحقق ورفع الصورة</button>
+                <button onclick="openVerificationModal()" class="btn-primary" style="background-color: #d97706; margin-top: 10px;">رفع المستند وتوثيق الحساب</button>
             `;
         }
     }
@@ -184,13 +188,14 @@ function stopAppCamera() {
     if (triggerBtn) triggerBtn.classList.remove('hidden');
 }
 
+// عند تأكيد رفع المستند/الصورة يتم تفعيل التوثيق وإظهار الشارة
 function capturePhotoFromStream() {
     stopAppCamera();
-    currentUser.isVerified = true;
+    currentUser.isVerified = true; // تم رفع المستند بنجاح
     localStorage.setItem('qmb_logged_user', JSON.stringify(currentUser));
-    updateUIProfile();
+    updateUIProfile(); // تحديث الواجهة لإظهار علامة التوثيق الآن
     closeVerificationModal();
-    showToast("🎉 مبروك! تم رفع صورة التحقق وتوثيق حسابك بنجاح.");
+    showToast("🎉 مبروك! تم رفع صورة المستند وتوثيق حسابك بنجاح.");
 }
 
 // ==========================================
@@ -316,7 +321,7 @@ function logout() {
 }
 
 // ==========================================
-// 4. نظام خطط الاستثمار والنافذة العصرية لإدخال المبلغ
+// 4. نظام خطط الاستثمار
 // ==========================================
 function selectInvestmentPlan(planType) {
     if (!currentUser.isVerified) {
@@ -409,7 +414,7 @@ function submitPaymentReceipt(planType, amount) {
 }
 
 // ==========================================
-// 5. نظام شراء USDT وطرق الدفع الجديدة (بنكك، فوري، أووكاش، ماي كاشي)
+// 5. نظام شراء USDT وطرق الدفع
 // ==========================================
 function openBuyUsdtModal() {
     if (!currentUser.isVerified) {
@@ -493,7 +498,6 @@ function showPaymentMethodsSelectionModal(amount) {
                     </label>
                 </div>
 
-                <!-- خانة إرفاق الإشعار وزر تم الدفع -->
                 <div id="receipt-section" style="display:none; flex-direction:column; gap:10px; margin-bottom:15px; border-top:1px dashed var(--card-border); padding-top:12px;">
                     <label style="font-size:13px; font-weight:bold;">ارفاق اشعار الدفع هنا:</label>
                     <input type="file" id="payment-receipt-file" accept="image/*" onchange="handleReceiptUpload(event)" style="font-size:12px; padding:8px; border:1px solid var(--card-border); border-radius:8px; background:var(--card-bg); width:100%;">

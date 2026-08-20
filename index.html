@@ -409,9 +409,15 @@
             </div>
 
             <div id="otp-step" class="hidden">
-                <input type="number" id="otp-input" placeholder="أدخل رمز التحقق المرسل">
+                <input type="number" id="otp-input" inputmode="numeric" autocomplete="one-time-code"
+                       maxlength="6" placeholder="أدخل رمز التحقق المرسل">
                 <button onclick="verifyOTP()" class="btn-primary">تأكيد الرمز</button>
+                <button type="button" id="resend-otp-btn" onclick="sendOTP(true)"
+                        style="margin-top:10px;width:100%;padding:12px;border:0;border-radius:12px;background:#eef2ff;color:#2563eb;font-weight:700;">
+                    إعادة إرسال الرمز
+                </button>
             </div>
+            <div id="auth-status" style="margin-top:12px;text-align:center;font-size:13px;min-height:20px;"></div>
 
             <div id="profile-step" class="hidden">
                 <input type="text" id="fullname-input" placeholder="الاسم الكامل">
@@ -649,15 +655,13 @@
                 </select>
             </div>
 
-            <!-- خطوة 2: نموذج إدخال التفاصيل وطريقة الدفع (تفتح بعد اختيار الدولة) -->
+            <!-- خطوة 2: نموذج إدخال التفاصيل وطريقة الدفع -->
             <div id="intl-step-details" class="hidden">
-                <!-- المبلغ المراد إرساله -->
                 <div style="margin-bottom: 10px;">
                     <label style="font-size: 12px; font-weight: bold; color: var(--text-main);">المبلغ المراد إرساله:</label>
                     <input type="number" id="intl-amount" placeholder="أدخل المبلغ" class="custom-input-3d">
                 </div>
 
-                <!-- اختيار طريقة الدفع المحلية -->
                 <label style="font-size: 12px; font-weight: bold; color: var(--text-main); display: block; margin-bottom: 5px;">طريقة الدفع المحلية (بيانات حساباتي):</label>
                 <div class="payment-methods-grid" style="margin-top: 5px; margin-bottom: 15px;">
                     <div class="payment-method-card" id="intl-card-bonk" onclick="toggleIntlLocalCard('بنكك')">
@@ -705,7 +709,6 @@
                     </div>
                 </div>
 
-                <!-- بيانات المرسل والمستلم -->
                 <div style="background: var(--card-bg-sub, #f9fafb); padding: 12px; border-radius: 12px; border: 1px solid var(--card-border, #e5e7eb); margin-bottom: 15px;">
                     <h4 style="font-size: 13px; color: var(--text-main); margin-bottom: 8px; border-bottom: 1px solid var(--card-border); padding-bottom: 4px;">بيانات التحويل</h4>
                     
@@ -1355,7 +1358,7 @@
         </div>
     </div>
 
-    <!-- نافذة تنبيه عدم إكمال التحقق (3D) -->
+    <!-- نافذة تنبيه عدم إكمال التحقق -->
     <div id="investment-kyc-alert-modal" class="success-overlay">
         <div class="success-card-3d">
             <div class="success-icon-3d" style="background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 8px 16px rgba(245, 158, 11, 0.35);">
@@ -1441,13 +1444,422 @@
             }
         }
 
+
+        /* =========================================================
+           QMB P2P - Appwrite Email OTP Authentication
+           Project: QMB P2P
+           Project ID: 6a7911fb00019874bd64
+           Web Hostname: qmbsdg-netizen.github.io
+           ========================================================= */
+
+        const QMB_APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
+        const QMB_APPWRITE_PROJECT_ID = "6a7911fb00019874bd64";
+
+        let qmbAppwriteClient = null;
+        let qmbAccount = null;
+        let qmbOtpUserId = sessionStorage.getItem("qmb_otp_user_id") || "";
+        let qmbOtpEmail = sessionStorage.getItem("qmb_otp_email") || "";
+        let qmbOtpCooldownTimer = null;
+        let qmbOtpSending = false;
+        let qmbOtpVerifying = false;
+
+        function initQMBAppwrite() {
+            if (!window.Appwrite || !window.Appwrite.Client || !window.Appwrite.Account) {
+                throw new Error("تعذر تحميل Appwrite SDK. تأكد من اتصال الإنترنت.");
+            }
+
+            if (!qmbAppwriteClient) {
+                qmbAppwriteClient = new Appwrite.Client()
+                    .setEndpoint(QMB_APPWRITE_ENDPOINT)
+                    .setProject(QMB_APPWRITE_PROJECT_ID);
+
+                qmbAccount = new Appwrite.Account(qmbAppwriteClient);
+            }
+
+            return qmbAccount;
+        }
+
+        function setAuthStatus(message, type = "info") {
+            const el = document.getElementById("auth-status");
+            if (!el) return;
+
+            const colors = {
+                info: "#6b7280",
+                success: "#059669",
+                error: "#dc2626"
+            };
+
+            el.textContent = message || "";
+            el.style.color = colors[type] || colors.info;
+        }
+
+        function setAuthButtonLoading(button, loadingText, defaultText) {
+            if (!button) return;
+            button.disabled = loadingText !== null;
+            button.textContent = loadingText === null ? defaultText : loadingText;
+            button.style.opacity = loadingText !== null ? "0.7" : "1";
+        }
+
+        function showAuthStep(step) {
+            const emailStep = document.getElementById("email-step");
+            const otpStep = document.getElementById("otp-step");
+            const profileStep = document.getElementById("profile-step");
+
+            if (emailStep) emailStep.classList.toggle("hidden", step !== "email");
+            if (otpStep) otpStep.classList.toggle("hidden", step !== "otp");
+            if (profileStep) profileStep.classList.toggle("hidden", step !== "profile");
+        }
+
+        function showQMBAppScreen() {
+            const authScreen = document.getElementById("auth-screen");
+            const appScreen = document.getElementById("app-screen");
+
+            if (authScreen) authScreen.classList.remove("active");
+            if (appScreen) appScreen.classList.add("active");
+        }
+
+        function showQMBAuthScreen() {
+            const authScreen = document.getElementById("auth-screen");
+            const appScreen = document.getElementById("app-screen");
+
+            if (appScreen) appScreen.classList.remove("active");
+            if (authScreen) authScreen.classList.add("active");
+        }
+
+        function normalizeQMBEmail(value) {
+            return String(value || "").trim().toLowerCase();
+        }
+
+        function isValidQMBEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        async function sendOTP(isResend = false) {
+            if (qmbOtpSending) return;
+
+            const emailInput = document.getElementById("email-input");
+            const sendButton = emailInput?.parentElement?.querySelector("button");
+            const email = normalizeQMBEmail(emailInput?.value);
+
+            if (!isValidQMBEmail(email)) {
+                setAuthStatus("أدخل بريدًا إلكترونيًا صحيحًا.", "error");
+                emailInput?.focus();
+                return;
+            }
+
+            if (!isResend && qmbOtpCooldownTimer) {
+                setAuthStatus("انتظر قليلًا قبل طلب رمز جديد.", "error");
+                return;
+            }
+
+            try {
+                qmbOtpSending = true;
+                setAuthStatus("جاري إرسال رمز التحقق إلى بريدك...", "info");
+                setAuthButtonLoading(sendButton, "جاري الإرسال...", "إرسال رمز التحقق");
+
+                const account = initQMBAppwrite();
+
+                // Appwrite creates a user automatically if this email is new.
+                // The returned secret is kept only in Appwrite's flow; it is never shown.
+                const token = await account.createEmailToken(
+                    Appwrite.ID.unique(),
+                    email,
+                    false
+                );
+
+                qmbOtpUserId = token.userId;
+                qmbOtpEmail = email;
+
+                sessionStorage.setItem("qmb_otp_user_id", qmbOtpUserId);
+                sessionStorage.setItem("qmb_otp_email", qmbOtpEmail);
+
+                const otpInput = document.getElementById("otp-input");
+                if (otpInput) {
+                    otpInput.value = "";
+                    otpInput.focus();
+                }
+
+                showAuthStep("otp");
+                setAuthStatus("تم إرسال رمز من 6 أرقام إلى بريدك الإلكتروني. افحص الوارد والرسائل غير المرغوب فيها.", "success");
+
+                startQMBResendCooldown(60);
+            } catch (error) {
+                console.error("QMB Appwrite send OTP error:", error);
+                setAuthStatus(getQMBAuthErrorMessage(error), "error");
+            } finally {
+                qmbOtpSending = false;
+                setAuthButtonLoading(sendButton, null, "إرسال رمز التحقق");
+            }
+        }
+
+        function startQMBResendCooldown(seconds) {
+            const button = document.getElementById("resend-otp-btn");
+            if (!button) return;
+
+            clearInterval(qmbOtpCooldownTimer);
+
+            let remaining = Number(seconds) || 60;
+            button.disabled = true;
+            button.style.opacity = "0.6";
+
+            const update = () => {
+                if (remaining <= 0) {
+                    clearInterval(qmbOtpCooldownTimer);
+                    qmbOtpCooldownTimer = null;
+                    button.disabled = false;
+                    button.style.opacity = "1";
+                    button.textContent = "إعادة إرسال الرمز";
+                    return;
+                }
+
+                button.textContent = `إعادة إرسال الرمز (${remaining})`;
+                remaining -= 1;
+            };
+
+            update();
+            qmbOtpCooldownTimer = setInterval(update, 1000);
+        }
+
+        async function verifyOTP() {
+            if (qmbOtpVerifying) return;
+
+            const otpInput = document.getElementById("otp-input");
+            const verifyButton = document.querySelector("#otp-step button.btn-primary");
+            const secret = String(otpInput?.value || "").trim();
+
+            if (!qmbOtpUserId || !qmbOtpEmail) {
+                setAuthStatus("انتهت جلسة التحقق. اطلب رمزًا جديدًا.", "error");
+                showAuthStep("email");
+                return;
+            }
+
+            if (!/^\d{6}$/.test(secret)) {
+                setAuthStatus("أدخل رمز التحقق المكوّن من 6 أرقام.", "error");
+                otpInput?.focus();
+                return;
+            }
+
+            try {
+                qmbOtpVerifying = true;
+                setAuthStatus("جاري التحقق من الرمز...", "info");
+                setAuthButtonLoading(verifyButton, "جاري التحقق...", "تأكيد الرمز");
+
+                const account = initQMBAppwrite();
+
+                // The secret is the 6-digit code entered by the user.
+                await account.createSession(qmbOtpUserId, secret);
+
+                // Clear the one-time token data after successful login.
+                sessionStorage.removeItem("qmb_otp_user_id");
+                sessionStorage.removeItem("qmb_otp_email");
+                qmbOtpUserId = "";
+                qmbOtpEmail = "";
+
+                const user = await account.get();
+
+                localStorage.setItem("qmb_logged_in", "true");
+                localStorage.setItem("qmb_user_email", user.email || "");
+
+                setAuthStatus("تم التحقق وتسجيل الدخول بنجاح.", "success");
+
+                const savedName = localStorage.getItem("qmb_profile_name") || user.name || "";
+                const savedPhone = localStorage.getItem("qmb_profile_phone") || "";
+
+                const fullnameInput = document.getElementById("fullname-input");
+                const phoneInput = document.getElementById("phone-input");
+
+                if (fullnameInput) fullnameInput.value = savedName;
+                if (phoneInput) phoneInput.value = savedPhone;
+
+                if (savedName && savedPhone) {
+                    applyQMBUserProfile(savedName, savedPhone, user.email);
+                    showQMBAppScreen();
+                } else {
+                    showAuthStep("profile");
+                }
+            } catch (error) {
+                console.error("QMB Appwrite verify OTP error:", error);
+                setAuthStatus(getQMBAuthErrorMessage(error), "error");
+            } finally {
+                qmbOtpVerifying = false;
+                setAuthButtonLoading(verifyButton, null, "تأكيد الرمز");
+            }
+        }
+
+        async function completeProfile() {
+            const fullnameInput = document.getElementById("fullname-input");
+            const phoneInput = document.getElementById("phone-input");
+
+            const fullname = String(fullnameInput?.value || "").trim();
+            const phone = String(phoneInput?.value || "").trim();
+
+            if (fullname.length < 2) {
+                setAuthStatus("أدخل اسمك الكامل.", "error");
+                fullnameInput?.focus();
+                return;
+            }
+
+            if (phone.length < 6) {
+                setAuthStatus("أدخل رقم هاتف صحيح.", "error");
+                phoneInput?.focus();
+                return;
+            }
+
+            try {
+                const account = initQMBAppwrite();
+
+                // Save the display name in the authenticated Appwrite account.
+                await account.updateName(fullname);
+
+                const user = await account.get();
+
+                localStorage.setItem("qmb_profile_name", fullname);
+                localStorage.setItem("qmb_profile_phone", phone);
+                localStorage.setItem("qmb_user_email", user.email || "");
+                localStorage.setItem("qmb_logged_in", "true");
+
+                applyQMBUserProfile(fullname, phone, user.email);
+                showQMBAppScreen();
+                setAuthStatus("");
+            } catch (error) {
+                console.error("QMB profile error:", error);
+                setAuthStatus(getQMBAuthErrorMessage(error), "error");
+            }
+        }
+
+        function applyQMBUserProfile(name, phone, email) {
+            const safeName = name || "عميل QMB";
+            const avatar = document.getElementById("user-avatar-img");
+            const modalAvatar = document.getElementById("modal-user-img");
+            const modalName = document.getElementById("modal-user-name");
+            const modalPhone = document.getElementById("modal-user-phone");
+
+            const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(safeName)}&background=2563eb&color=fff`;
+
+            if (avatar) avatar.src = avatarUrl;
+            if (modalAvatar) modalAvatar.src = avatarUrl;
+            if (modalName) modalName.textContent = safeName;
+            if (modalPhone) modalPhone.textContent = phone || email || "";
+        }
+
+        async function restoreQMBSession() {
+            try {
+                const account = initQMBAppwrite();
+                const user = await account.get();
+
+                localStorage.setItem("qmb_logged_in", "true");
+                localStorage.setItem("qmb_user_email", user.email || "");
+
+                const name = localStorage.getItem("qmb_profile_name") || user.name || "";
+                const phone = localStorage.getItem("qmb_profile_phone") || "";
+
+                if (name && phone) {
+                    applyQMBUserProfile(name, phone, user.email);
+                    showQMBAppScreen();
+                } else {
+                    const fullnameInput = document.getElementById("fullname-input");
+                    const phoneInput = document.getElementById("phone-input");
+
+                    if (fullnameInput) fullnameInput.value = name;
+                    if (phoneInput) phoneInput.value = phone;
+
+                    showAuthStep("profile");
+                }
+
+                return true;
+            } catch (error) {
+                // No valid Appwrite session is normal for a new visitor.
+                localStorage.removeItem("qmb_logged_in");
+                showQMBAuthScreen();
+
+                if (qmbOtpUserId && qmbOtpEmail) {
+                    const emailInput = document.getElementById("email-input");
+                    if (emailInput) emailInput.value = qmbOtpEmail;
+                    showAuthStep("otp");
+                } else {
+                    showAuthStep("email");
+                }
+
+                return false;
+            }
+        }
+
+        async function logout() {
+            try {
+                const account = initQMBAppwrite();
+                await account.deleteSession("current");
+            } catch (error) {
+                console.warn("QMB logout:", error);
+            }
+
+            localStorage.removeItem("qmb_logged_in");
+            localStorage.removeItem("qmb_user_email");
+            sessionStorage.removeItem("qmb_otp_user_id");
+            sessionStorage.removeItem("qmb_otp_email");
+
+            qmbOtpUserId = "";
+            qmbOtpEmail = "";
+
+            clearInterval(qmbOtpCooldownTimer);
+            qmbOtpCooldownTimer = null;
+
+            const emailInput = document.getElementById("email-input");
+            const otpInput = document.getElementById("otp-input");
+            const fullnameInput = document.getElementById("fullname-input");
+            const phoneInput = document.getElementById("phone-input");
+
+            if (emailInput) emailInput.value = "";
+            if (otpInput) otpInput.value = "";
+            if (fullnameInput) fullnameInput.value = "";
+            if (phoneInput) phoneInput.value = "";
+
+            setAuthStatus("");
+            showAuthStep("email");
+            showQMBAuthScreen();
+        }
+
+        function getQMBAuthErrorMessage(error) {
+            const message = String(error?.message || "").toLowerCase();
+
+            if (message.includes("rate") || message.includes("too many")) {
+                return "تم تجاوز حد المحاولات. انتظر قليلًا ثم حاول مرة أخرى.";
+            }
+
+            if (message.includes("invalid") && message.includes("secret")) {
+                return "رمز التحقق غير صحيح أو انتهت صلاحيته. اطلب رمزًا جديدًا.";
+            }
+
+            if (message.includes("expired")) {
+                return "انتهت صلاحية رمز التحقق. اطلب رمزًا جديدًا.";
+            }
+
+            if (message.includes("cors") || message.includes("origin")) {
+                return "تعذر الاتصال بـ Appwrite. تأكد من إضافة qmbsdg-netizen.github.io كـ Web Platform.";
+            }
+
+            if (message.includes("project") && message.includes("not found")) {
+                return "لم يتم العثور على مشروع Appwrite. تحقق من Project ID.";
+            }
+
+            return error?.message
+                ? `حدث خطأ: ${error.message}`
+                : "حدث خطأ أثناء التحقق. حاول مرة أخرى.";
+        }
+
+        // Restore an existing Appwrite session when the page opens.
+        document.addEventListener("DOMContentLoaded", () => {
+            setTimeout(() => {
+                restoreQMBSession();
+            }, 0);
+        });
+
         document.addEventListener("DOMContentLoaded", () => {
             const isVerified = localStorage.getItem("qmb_account_verified") === "true";
             updateVerificationUI(isVerified);
             updatePlatformLiquidity();
             setInterval(updatePlatformLiquidity, 12 * 60 * 60 * 1000);
 
-            // إغلاق النوافذ عند النقر على الخلفية الضبابية Outside Click
+            // إغلاق النوافذ عند النقر على الخلفية الخارجية Outside Click
             document.querySelectorAll('.modal-overlay').forEach(modal => {
                 modal.addEventListener('click', (e) => {
                     if (e.target === modal) {
@@ -1462,8 +1874,8 @@
             const topVerificationBtn = document.getElementById('top-verification-btn');
             const accountStatusText = document.getElementById('account-status-text');
 
-            // لا تظهر أي علامة "حساب موثق" إلا بعد رفع مستند الهوية بنجاح.
-            if (verified === true) {
+            // لن يعرض "حساب موثق" إلا إذا رفع المستند بالفعل وأصبح verified === true
+            if (verified) {
                 if (topVerifyText) topVerifyText.innerText = "حساب موثق";
                 if (topVerificationBtn) {
                     topVerificationBtn.style.background = "linear-gradient(135deg, #10b981, #059669)";
@@ -1478,6 +1890,32 @@
                 }
                 if (accountStatusText) accountStatusText.innerHTML = "غير موثق ❌";
             }
+        }
+
+        function openVerificationModal() {
+            document.getElementById('verification-modal').classList.remove('hidden');
+        }
+
+        function closeVerificationModal() {
+            document.getElementById('verification-modal').classList.add('hidden');
+        }
+
+        function handleKycFileUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            
+            // تحقق من وجود ملف مرفوع بالفعل قبل التوثيق
+            if (!file) return;
+
+            // حفظ حالة التوثيق فقط بعد اختيار الملف
+            localStorage.setItem("qmb_account_verified", "true");
+            updateVerificationUI(true);
+
+            closeVerificationModal();
+            document.getElementById('successOverlay').classList.add('active');
+        }
+
+        function returnToHomeScreen() {
+            document.getElementById('successOverlay').classList.remove('active');
         }
 
         function closeCustomAlert() {
@@ -1706,7 +2144,7 @@
             window.location.href = whatsappUrl;
         }
 
-        /* دوال خدمة التحويلات الدولية المعدلة */
+        /* دوال خدمة التحويلات الدولية */
         let selectedIntlLocalOption = '';
 
         function openIntlTransferModal() {
@@ -1995,61 +2433,12 @@
             window.location.href = whatsappUrl;
         }
 
-        function handleKycFileUpload(event) {
-            const file = event.target.files && event.target.files[0];
-            if (!file) return;
-
-            // لا يتم اعتماد الحساب لمجرد فتح نافذة التحقق؛ يجب اختيار مستند فعلي.
-            if (!file.type || !file.type.startsWith('image/')) {
-                event.target.value = '';
-                return;
-            }
-
-            showSuccess3DModal();
-        }
-
-        function showSuccess3DModal() {
-            document.getElementById('verification-modal').classList.add('hidden');
-            document.getElementById('successOverlay').classList.add('active');
-            
-            localStorage.setItem("qmb_account_verified", "true");
-            updateVerificationUI(true);
-        }
-
-        function returnToHomeScreen() {
-            document.getElementById('successOverlay').classList.remove('active');
-            const activeModals = document.querySelectorAll('.modal-overlay');
-            activeModals.forEach(modal => modal.classList.add('hidden'));
-        }
-
-        function uploadAvatar(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const avatarImg = document.getElementById('user-avatar-img');
-                    const modalAvatarImg = document.getElementById('modal-user-img');
-                    if(avatarImg) avatarImg.src = e.target.result;
-                    if(modalAvatarImg) modalAvatarImg.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
         function openProfileModal() {
             document.getElementById('profile-modal').classList.remove('hidden');
         }
 
         function closeProfileModal() {
             document.getElementById('profile-modal').classList.add('hidden');
-        }
-
-        function openVerificationModal() {
-            document.getElementById('verification-modal').classList.remove('hidden');
-        }
-
-        function closeVerificationModal() {
-            document.getElementById('verification-modal').classList.add('hidden');
         }
     </script>
 </body>

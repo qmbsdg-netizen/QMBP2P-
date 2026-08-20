@@ -393,6 +393,25 @@
         .custom-input-3d:focus {
             border-color: #2563eb;
         }
+        .profile-verification-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: linear-gradient(135deg,#10b981,#059669);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            box-shadow: 0 4px 10px rgba(16,185,129,.22);
+            vertical-align: middle;
+        }
+        .profile-verification-badge ion-icon {
+            font-size: 14px;
+        }
+        .profile-verification-badge.hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -1332,29 +1351,64 @@
         </div>
     </div>
 
-    <!-- نافذة إكمال التحقق -->
+    <!-- نافذة إكمال التحقق KYC -->
     <div id="verification-modal" class="modal-overlay hidden">
-        <div class="modal-card verify-modal-3d">
+        <div class="modal-card verify-modal-3d" style="max-width:440px;max-height:92vh;overflow-y:auto;text-align:right;">
             <button class="close-modal" onclick="closeVerificationModal()"><ion-icon name="close"></ion-icon></button>
-            <div class="amount-modal-header">
-                <div class="modal-icon-badge">
-                    <ion-icon name="cloud-upload-outline"></ion-icon>
+
+            <div class="amount-modal-header" style="text-align:center;">
+                <div class="modal-icon-badge" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;">
+                    <ion-icon name="shield-checkmark-outline"></ion-icon>
                 </div>
                 <h3>توثيق الهوية (KYC)</h3>
-                <p>ارفع صورة مستندك الرسمي للتحقق من هويتك</p>
+                <p>أكمل بيانات الهوية وارفع المستندات المطلوبة للمراجعة.</p>
             </div>
 
             <div class="kyc-warning-box">
-                تحذير. الرجاء التأكد من رفع مستندك الرسمي الصحيح لعدم حصول مشاكل في الحساب
+                🔒 بيانات التحقق مخصصة لمراجعة الهوية فقط. تأكد أن الصور واضحة وكاملة وغير مقصوصة.
             </div>
 
-            <label for="kyc-file-upload-input" class="btn-primary-3d" style="margin-bottom: 10px; background: linear-gradient(135deg, #2563eb, #1d4ed8); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 14px; border-radius: 12px; font-weight: bold;">
-                <ion-icon name="image-outline" style="font-size: 20px;"></ion-icon>
-                <span>رفع مستند الهوية من الجهاز</span>
-            </label>
-            <input type="file" id="kyc-file-upload-input" accept="image/*" style="display: none;" onchange="handleKycFileUpload(event)">
+            <label style="font-size:12px;font-weight:700;color:var(--text-main);">نوع إثبات الهوية</label>
+            <select id="kyc-document-type" class="custom-select-3d" style="margin-top:6px;" onchange="localStorage.setItem('qmb_kyc_document_type', this.value); updateKycCompleteButton(); updateKycSelectedStatus();">
+                <option value="">-- اختر نوع إثبات الهوية --</option>
+                <option value="passport">جواز السفر</option>
+                <option value="national_id">الهوية الوطنية</option>
+                <option value="driver_license">رخصة القيادة</option>
+            </select>
 
-            <button onclick="closeVerificationModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 5px;">إغلاق</button>
+            <label style="font-size:12px;font-weight:700;color:var(--text-main);display:block;margin-top:10px;">صورة إثبات الهوية</label>
+            <label for="kyc-front-upload-input" class="btn-primary-3d"
+                   style="margin-top:6px;margin-bottom:12px;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:#fff;padding:13px;border-radius:12px;font-weight:bold;">
+                <ion-icon name="camera-outline"></ion-icon>
+                <span id="kyc-front-label">رفع صورة إثبات الهوية</span>
+            </label>
+            <input type="file" id="kyc-front-upload-input" accept="image/jpeg,image/png,image/webp"
+                   style="display:none;" onchange="handleKycFileUpload(event,'front')">
+
+            <label style="font-size:12px;font-weight:700;color:var(--text-main);display:block;">سيلفي الوجه للتحقق</label>
+            <label for="kyc-selfie-upload-input" class="btn-primary-3d"
+                   style="margin-top:6px;margin-bottom:12px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:#fff;padding:13px;border-radius:12px;font-weight:bold;">
+                <ion-icon name="person-circle-outline"></ion-icon>
+                <span id="kyc-selfie-label">رفع سيلفي الوجه</span>
+            </label>
+            <input type="file" id="kyc-selfie-upload-input" accept="image/jpeg,image/png,image/webp"
+                   style="display:none;" onchange="handleKycFileUpload(event,'selfie')">
+
+            <div id="kyc-selected-status" style="font-size:12px;color:var(--text-secondary);background:var(--card-bg-sub,#f9fafb);border:1px solid var(--card-border,#e5e7eb);border-radius:12px;padding:10px;margin-bottom:12px;">
+                اختر نوع إثبات الهوية وارفع صورة الإثبات وسيلفي الوجه.
+            </div>
+
+            <button id="kyc-complete-btn" onclick="completeKycVerification()" class="btn-primary-3d" disabled
+                    style="background:linear-gradient(135deg,#94a3b8,#64748b);opacity:.65;cursor:not-allowed;width:100%;padding:14px;font-size:15px;">
+                <ion-icon name="shield-checkmark-outline"></ion-icon>
+                <span>إكمال التحقق</span>
+            </button>
+
+            <p style="font-size:11px;color:var(--text-secondary);text-align:center;margin:10px 0 0;line-height:1.5;">
+                الرجاء التأكد من رفع مستندك الأصلي بوضوح وكاملًا لعدم حصول أي مشاكل في الحساب.
+            </p>
+
+            <button onclick="closeVerificationModal()" style="width:100%;padding:10px;background:transparent;border:1px solid var(--card-border);color:var(--text-secondary);border-radius:10px;cursor:pointer;font-size:12px;margin-top:8px;">إغلاق</button>
         </div>
     </div>
 
@@ -1403,7 +1457,13 @@
                 <input type="file" id="change-avatar-input" accept="image/*" class="hidden" onchange="uploadAvatar(event)">
             </div>
             
-            <h3 id="modal-user-name" class="modal-title">Ufhif</h3>
+            <div style="display:flex;align-items:center;justify-content:center;gap:7px;margin-top:10px;">
+                <h3 id="modal-user-name" class="modal-title" style="margin:0;">Ufhif</h3>
+                <span id="profile-verification-badge" class="profile-verification-badge hidden" title="حساب موثق">
+                    <ion-icon name="checkmark-circle"></ion-icon>
+                    <span>موثق</span>
+                </span>
+            </div>
             <span class="modal-phone" id="modal-user-phone">999986</span>
 
             <div class="user-stats-grid">
@@ -1873,45 +1933,128 @@
             const topVerifyText = document.getElementById('top-verify-text');
             const topVerificationBtn = document.getElementById('top-verification-btn');
             const accountStatusText = document.getElementById('account-status-text');
+            const pending = localStorage.getItem("qmb_kyc_status") === "pending";
 
-            // لن يعرض "حساب موثق" إلا إذا رفع المستند بالفعل وأصبح verified === true
+            const profileBadge = document.getElementById("profile-verification-badge");
+
             if (verified) {
                 if (topVerifyText) topVerifyText.innerText = "حساب موثق";
                 if (topVerificationBtn) {
-                    topVerificationBtn.style.background = "linear-gradient(135deg, #10b981, #059669)";
-                    topVerificationBtn.style.color = "#ffffff";
+                    topVerificationBtn.style.background = "linear-gradient(135deg,#10b981,#059669)";
+                    topVerificationBtn.style.color = "#fff";
                 }
                 if (accountStatusText) accountStatusText.innerHTML = "موثق ✅";
+                if (profileBadge) profileBadge.classList.remove("hidden");
+            } else if (pending) {
+                if (profileBadge) profileBadge.classList.add("hidden");
+                if (topVerifyText) topVerifyText.innerText = "قيد المراجعة";
+                if (topVerificationBtn) {
+                    topVerificationBtn.style.background = "linear-gradient(135deg,#f59e0b,#d97706)";
+                    topVerificationBtn.style.color = "#fff";
+                }
+                if (accountStatusText) accountStatusText.innerHTML = "قيد المراجعة ⏳";
             } else {
+                if (profileBadge) profileBadge.classList.add("hidden");
                 if (topVerifyText) topVerifyText.innerText = "إكمال التحقق";
                 if (topVerificationBtn) {
-                    topVerificationBtn.style.background = "linear-gradient(135deg, #ef4444, #dc2626)";
-                    topVerificationBtn.style.color = "#ffffff";
+                    topVerificationBtn.style.background = "linear-gradient(135deg,#ef4444,#dc2626)";
+                    topVerificationBtn.style.color = "#fff";
                 }
                 if (accountStatusText) accountStatusText.innerHTML = "غير موثق ❌";
             }
         }
 
         function openVerificationModal() {
-            document.getElementById('verification-modal').classList.remove('hidden');
+            const modal = document.getElementById('verification-modal');
+            if (modal) modal.classList.remove('hidden');
+
+            const type = localStorage.getItem("qmb_kyc_document_type") || "";
+            const select = document.getElementById("kyc-document-type");
+            if (select) select.value = type;
+
+            updateKycSelectedStatus();
+            updateKycCompleteButton();
         }
 
         function closeVerificationModal() {
             document.getElementById('verification-modal').classList.add('hidden');
         }
 
-        function handleKycFileUpload(event) {
+        function handleKycFileUpload(event, side) {
             const file = event.target.files && event.target.files[0];
-            
-            // تحقق من وجود ملف مرفوع بالفعل قبل التوثيق
             if (!file) return;
 
-            // حفظ حالة التوثيق فقط بعد اختيار الملف
+            if (side === "front") {
+                localStorage.setItem("qmb_kyc_front_uploaded", "true");
+                const label = document.getElementById("kyc-front-label");
+                if (label) label.innerText = "تم رفع صورة إثبات الهوية ✓";
+            }
+
+            if (side === "selfie") {
+                localStorage.setItem("qmb_kyc_selfie_uploaded", "true");
+                const label = document.getElementById("kyc-selfie-label");
+                if (label) label.innerText = "تم رفع سيلفي الوجه ✓";
+            }
+
+            updateKycSelectedStatus();
+            updateKycCompleteButton();
+        }
+
+        function updateKycSelectedStatus() {
+            const status = document.getElementById("kyc-selected-status");
+            if (!status) return;
+
+            const type = document.getElementById("kyc-document-type")?.value;
+            const front = localStorage.getItem("qmb_kyc_front_uploaded") === "true";
+            const selfie = localStorage.getItem("qmb_kyc_selfie_uploaded") === "true";
+
+            const items = [];
+            items.push(type ? "نوع الإثبات ✓" : "نوع الإثبات لم يُحدد");
+            items.push(front ? "صورة الإثبات ✓" : "صورة الإثبات لم تُرفع");
+            items.push(selfie ? "سيلفي الوجه ✓" : "سيلفي الوجه لم تُرفع");
+
+            status.innerText = items.join(" • ");
+            status.style.color = (type && front && selfie) ? "#059669" : "var(--text-secondary)";
+        }
+
+        function updateKycCompleteButton() {
+            const button = document.getElementById("kyc-complete-btn");
+            if (!button) return;
+
+            const type = document.getElementById("kyc-document-type")?.value;
+            const front = localStorage.getItem("qmb_kyc_front_uploaded") === "true";
+            const selfie = localStorage.getItem("qmb_kyc_selfie_uploaded") === "true";
+            const ready = !!type && front && selfie;
+
+            button.disabled = !ready;
+            button.style.opacity = ready ? "1" : ".65";
+            button.style.cursor = ready ? "pointer" : "not-allowed";
+            button.style.background = ready
+                ? "linear-gradient(135deg,#2563eb,#1d4ed8)"
+                : "linear-gradient(135deg,#94a3b8,#64748b)";
+        }
+
+        function completeKycVerification() {
+            const type = document.getElementById("kyc-document-type")?.value;
+            const front = localStorage.getItem("qmb_kyc_front_uploaded") === "true";
+            const selfie = localStorage.getItem("qmb_kyc_selfie_uploaded") === "true";
+
+            if (!type || !front || !selfie) {
+                updateKycSelectedStatus();
+                updateKycCompleteButton();
+                return;
+            }
+
             localStorage.setItem("qmb_account_verified", "true");
+            localStorage.removeItem("qmb_kyc_status");
             updateVerificationUI(true);
 
             closeVerificationModal();
-            document.getElementById('successOverlay').classList.add('active');
+
+            const overlay = document.getElementById("successOverlay");
+            if (overlay) {
+                overlay.classList.add("active");
+            }
         }
 
         function returnToHomeScreen() {

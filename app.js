@@ -407,7 +407,7 @@ function submitPaymentReceipt(planType, amount) {
     closePaymentModal();
 
     const message = `مرحباً، لقد قمت بالدفع وإرسال إيصال لخطـة الاستثمار:\nالخطة: [ ${planType} ]\nالمبلغ: ${amount} USDT\nاسم العميل: ${currentUser.name}\nرقم الهاتف: ${currentUser.phone}`;
-    const whatsappURL = `https://wa.me/249904252568?text=${encodeURIComponent(message)}`;
+    const whatsappURL = `https://wa.me/201271915488?text=${encodeURIComponent(message)}`;
     
     window.open(whatsappURL, '_blank');
     showToast("تم تسجيل طلب اشتراكك وتوجيهك لتأكيد الإيصال!");
@@ -555,9 +555,8 @@ function finalizeBuyOrder() {
 
     closeBuyMethodsModal();
 
-    const phoneNumber = "249904252568";
     const message = `مرحباً، لقد قمت بشراء وتحويل مبلغ عبر طريقة الدفع:\nطريقة الدفع: [ ${selectedPaymentMethod} ]\nالكمية: ${currentUser.buyAmount} USDT\nاسم العميل: ${currentUser.name}\nرقم الهاتف: ${currentUser.phone}\nتم إرفاق الإشعار بنجاح.`;
-    const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    const whatsappURL = `https://wa.me/201271915488?text=${encodeURIComponent(message)}`;
     
     window.open(whatsappURL, '_blank');
     showToast("تم إرسال تفاصيل الطلب وتوجيهك إلى واتساب بنجاح!");
@@ -632,7 +631,7 @@ function toggleBalance() {
 
 function openChatWithContext(serviceName) {
     const message = `مرحباً، أريـد طلب أو الاستفسار عن خدمة: [ ${serviceName} ]\nاسم العميل: ${currentUser.name}\nرقم الهاتف: ${currentUser.phone}`;
-    const whatsappURL = `https://wa.me/249904252568?text=${encodeURIComponent(message)}`;
+    const whatsappURL = `https://wa.me/201271915488?text=${encodeURIComponent(message)}`;
     window.open(whatsappURL, '_blank');
 }
 

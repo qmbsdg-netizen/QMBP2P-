@@ -1,642 +1,2588 @@
-// ==========================================
-// ⚙️ البيانات الأساسية (السيولة والأسعار الجديدة)
-// ==========================================
-let platformUSDT = 897869753.00;
-let platformSDG = 5377847392950;
-let currentUser = {
-    name: "Mustafa",
-    phone: "0912345678",
-    avatar: "",
-    subscriptions: [],
-    email: "",
-    isVerified: false, // افتراضياً الحساب غير موثق
-    selectedInvestment: null,
-    investmentAmount: 0
-};
-
-let generatedOTP = "";
-let activeCameraStream = null;
-let selectedPaymentMethod = "";
-let uploadedReceiptData = null;
-
-// نظام إشعارات عصري احترافي
-function showToast(message, type = 'success') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    toast.className = `custom-toast ${type}`;
-    
-    let iconName = 'checkmark-circle-outline';
-    if (type === 'error') iconName = 'alert-circle-outline';
-    if (type === 'info') iconName = 'information-circle-outline';
-
-    toast.innerHTML = `
-        <ion-icon name="${iconName}"></ion-icon>
-        <span style="flex:1;">${message}</span>
-    `;
-
-    container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(20px)';
-        setTimeout(() => toast.remove(), 300);
-    }, 3500);
-}
-
-// ==========================================
-// 1. ميزة تفعيل الوضع الداكن وفحص حالة الدخول
-// ==========================================
-function toggleTheme() {
-    const htmlTag = document.documentElement;
-    const currentTheme = htmlTag.getAttribute('data-theme');
-    const themeIcon = document.getElementById('theme-icon');
-    if (currentTheme === 'dark') {
-        htmlTag.setAttribute('data-theme', 'light');
-        themeIcon.setAttribute('name', 'moon-outline');
-        localStorage.setItem('theme', 'light');
-    } else {
-        htmlTag.setAttribute('data-theme', 'dark');
-        themeIcon.setAttribute('name', 'sun-outline');
-        localStorage.setItem('theme', 'dark');
-    }
-}
-
-function loadSavedTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    const themeIcon = document.getElementById('theme-icon');
-    if (themeIcon) {
-        themeIcon.setAttribute('name', savedTheme === 'dark' ? 'sun-outline' : 'moon-outline');
-    }
-}
-
-function checkLoginState() {
-    const savedUser = localStorage.getItem('qmb_logged_user');
-    if (savedUser) {
-        currentUser = JSON.parse(savedUser);
-        updateUIProfile();
-        navigateTo('app-screen');
-    } else {
-        navigateTo('auth-screen');
-    }
-}
-
-// ==========================================
-// تحديث واجهة الملف الشخصي وضبط إظهار شارة التوثيق
-// ==========================================
-function updateUIProfile() {
-    const modalNameElem = document.getElementById('modal-user-name');
-    const modalPhoneElem = document.getElementById('modal-user-phone');
-    
-    if (modalNameElem) modalNameElem.innerText = currentUser.name;
-    if (modalPhoneElem) modalPhoneElem.innerText = currentUser.phone;
-
-    if (currentUser.avatar) {
-        const avatarImg1 = document.getElementById('user-avatar-img');
-        const avatarImg2 = document.getElementById('modal-user-img');
-        if (avatarImg1) avatarImg1.src = currentUser.avatar;
-        if (avatarImg2) avatarImg2.src = currentUser.avatar;
-    }
-
-    const topVerifyBtn = document.getElementById('top-verification-btn');
-    const topVerifyText = document.getElementById('top-verify-text');
-    const verifyContainer = document.getElementById('verification-status-container');
-
-    // 🎯 لا تظهر علامة التوثيق أعلى الشاشة إلا بعد أن يتم التوثيق بالفعل برفع المستند
-    if (topVerifyBtn && topVerifyText) {
-        if (currentUser.isVerified) {
-            topVerifyBtn.style.display = "inline-flex"; // إظهار علامة التوثيق
-            topVerifyBtn.className = "binance-verify-pill verified-pill";
-            topVerifyText.innerHTML = `<ion-icon name="checkmark-seal" style="vertical-align: middle;"></ion-icon> موثق بنجاح`;
-        } else {
-            topVerifyBtn.style.display = "none"; // إخفاء الشارة تماماً طالما لم يرفع المستند
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QMB P2P & Financial Services</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.0"></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <style>
+        .success-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
         }
-    }
 
-    if (verifyContainer) {
-        if (currentUser.isVerified) {
-            verifyContainer.innerHTML = `<p style="color: #10b981; font-weight: bold; text-align: center; font-size: 13px;">✔ الحساب موثق بنجاح</p>`;
-        } else {
-            verifyContainer.innerHTML = `
-                <button onclick="openVerificationModal()" class="btn-primary" style="background-color: #d97706; margin-top: 10px;">رفع المستند وتوثيق الحساب</button>
-            `;
+        .success-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
         }
-    }
 
-    const subsContainer = document.getElementById('active-subscriptions');
-    if (subsContainer) {
-        if (currentUser.subscriptions && currentUser.subscriptions.length > 0) {
-            subsContainer.innerHTML = currentUser.subscriptions.map(sub => `
-                <div class="sub-item gold-sub" style="margin-bottom: 8px;">
-                    <ion-icon name="ribbon-outline"></ion-icon>
-                    <div>
-                        <strong>${sub} (نشط)</strong>
-                        <small>تم تفعيل العائد الاستثماري بنجاح</small>
-                    </div>
-                </div>
-            `).join('');
-        } else {
-            subsContainer.innerHTML = `<p style="color: var(--text-secondary); font-size: 12px; text-align: center;">لا توجد اشتراكات نشطة حالياً.</p>`;
+        .success-card-3d {
+            background: var(--card-bg, #ffffff);
+            width: 85%;
+            max-width: 340px;
+            padding: 30px 20px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 
+                        0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+            transform: translateY(20px) scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-    }
-}
 
-// ==========================================
-// 2. نظام رفع صورة التحقق من الجهاز
-// ==========================================
-function openVerificationModal() {
-    if (currentUser.isVerified) {
-        return showToast("حسابك موثق بالفعل بالكامل ✅", "info");
-    }
-    document.getElementById('verification-modal').classList.remove('hidden');
-}
+        .success-overlay.active .success-card-3d {
+            transform: translateY(0) scale(1);
+        }
 
-function closeVerificationModal() {
-    stopAppCamera();
-    document.getElementById('verification-modal').classList.add('hidden');
-}
+        .success-icon-3d {
+            width: 65px;
+            height: 65px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            margin: 0 auto 18px;
+            box-shadow: 0 8px 16px rgba(16, 185, 129, 0.35);
+        }
 
-async function triggerAppCamera() {
-    let fileInput = document.getElementById('verification-file-input');
-    if (!fileInput) {
-        fileInput = document.createElement('input');
-        fileInput.id = 'verification-file-input';
-        fileInput.type = 'file';
-        fileInput.accept = 'image/*';
-        fileInput.style.display = 'none';
-        fileInput.onchange = function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                capturePhotoFromStream();
-            }
-        };
-        document.body.appendChild(fileInput);
-    }
-    fileInput.click();
-}
+        .success-card-3d h3 {
+            color: var(--text-main, #111827);
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
 
-function stopAppCamera() {
-    if (activeCameraStream) {
-        activeCameraStream.getTracks().forEach(track => track.stop());
-        activeCameraStream = null;
-    }
-    const containerBox = document.getElementById('camera-container-box');
-    const triggerBtn = document.getElementById('open-cam-trigger-btn');
-    if (containerBox) containerBox.classList.add('hidden');
-    if (triggerBtn) triggerBtn.classList.remove('hidden');
-}
+        .success-card-3d p {
+            color: var(--text-secondary, #6b7280);
+            font-size: 14px;
+            margin-bottom: 22px;
+            line-height: 1.5;
+        }
 
-// عند تأكيد رفع المستند/الصورة يتم تفعيل التوثيق وإظهار الشارة
-function capturePhotoFromStream() {
-    stopAppCamera();
-    currentUser.isVerified = true; // تم رفع المستند بنجاح
-    localStorage.setItem('qmb_logged_user', JSON.stringify(currentUser));
-    updateUIProfile(); // تحديث الواجهة لإظهار علامة التوثيق الآن
-    closeVerificationModal();
-    showToast("🎉 مبروك! تم رفع صورة المستند وتوثيق حسابك بنجاح.");
-}
-
-// ==========================================
-// 3. إدارة تسجيل الدخول والتحقق (OTP)
-// ==========================================
-function isValidEmail(email) {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-}
-
-function sendOTP() {
-    const emailInput = document.getElementById('email-input');
-    const email = emailInput.value.trim();
-    
-    if (!email || !isValidEmail(email)) {
-        return showToast('يرجى إدخال بريد إلكتروني صحيح (مثال: user@gmail.com)', 'error');
-    }
-
-    currentUser.email = email;
-    generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
-
-    showPersistentOtpToast(generatedOTP);
-
-    document.getElementById('email-step').classList.add('hidden');
-    document.getElementById('otp-step').classList.remove('hidden');
-}
-
-function showPersistentOtpToast(otpCode) {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    const toast = document.createElement('div');
-    toast.className = 'custom-toast info persistent-otp-box';
-    toast.style.cssText = `
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-        padding: 16px 20px;
-        background: var(--card-bg, #ffffff);
-        color: var(--text-main, #111827);
-        border: 1px solid rgba(37, 99, 235, 0.3);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        border-radius: 16px;
-        width: 100%;
-        max-width: 320px;
-        margin: 0 auto 10px auto;
-        pointer-events: auto;
-    `;
-
-    toast.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
-            <ion-icon name="information-circle-outline" style="font-size: 26px; color: #2563eb;"></ion-icon>
-            <div style="text-align: right; flex: 1;">
-                <span style="font-size: 13px; color: var(--text-secondary, #6b7280); display: block;">رمز التحقق المرسل:</span>
-                <strong style="font-size: 20px; color: #2563eb; letter-spacing: 1px;">${otpCode}</strong>
-            </div>
-        </div>
-        <button id="toast-ok-btn" style="
+        .btn-home {
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: white;
             border: none;
             width: 100%;
-            padding: 10px;
-            border-radius: 10px;
-            font-size: 14px;
+            padding: 13px;
+            border-radius: 12px;
+            font-size: 15px;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(37,99,235,0.3);
-        ">موافق</button>
-    `;
+            box-shadow: 0 6px 15px rgba(37, 99, 235, 0.3);
+            transition: transform 0.1s;
+        }
 
-    container.appendChild(toast);
+        .btn-home:active {
+            transform: scale(0.98);
+        }
 
-    document.getElementById('toast-ok-btn').addEventListener('click', () => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(20px)';
-        setTimeout(() => toast.remove(), 300);
-    });
-}
+        .kyc-warning-box {
+            background-color: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fef3c7;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-align: center;
+            line-height: 1.4;
+        }
 
-function verifyOTP() {
-    const otp = document.getElementById('otp-input').value.trim();
-    if (otp === generatedOTP) {
-        document.getElementById('otp-step').classList.add('hidden');
-        document.getElementById('profile-step').classList.remove('hidden');
-        showToast("تم التحقق من البريد بنجاح!");
-    } else {
-        showToast('رمز التحقق غير صحيح!', 'error');
-    }
-}
+        .action-container-3d {
+            margin-top: 8px;
+            text-align: center;
+        }
 
-function completeProfile() {
-    const name = document.getElementById('fullname-input').value.trim();
-    const phone = document.getElementById('phone-input').value.trim();
-    if (!name || !phone) return showToast('يرجى إكمال البيانات المطلوبة', 'error');
-    
-    currentUser.name = name;
-    currentUser.phone = phone;
-    currentUser.avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=fff`;
+        .btn-small-3d-sell {
+            background: linear-gradient(135deg, #ffffff, #fef2f2);
+            color: #dc2626;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15), 
+                        0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 100%;
+        }
 
-    localStorage.setItem('qmb_logged_user', JSON.stringify(currentUser));
-    updateUIProfile();
-    navigateTo('app-screen');
-    updatePlatformLiquidity();
-    showToast(`مرحباً بك مجدداً يا ${name}`);
-}
+        .btn-small-3d-sell:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2);
+        }
 
-function logout() {
-    localStorage.removeItem('qmb_logged_user');
-    generatedOTP = '';
-    currentUser.subscriptions = [];
-    currentUser.isVerified = false;
-    document.getElementById('email-step').classList.remove('hidden');
-    document.getElementById('otp-step').classList.add('hidden');
-    document.getElementById('profile-step').classList.add('hidden');
-    document.getElementById('email-input').value = '';
-    document.getElementById('otp-input').value = '';
-    navigateTo('auth-screen');
-    showToast("تم تسجيل الخروج بنجاح", "info");
-}
+        .btn-small-3d-buy {
+            background: linear-gradient(135deg, #ffffff, #f0fdf4);
+            color: #059669;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15), 
+                        0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 100%;
+        }
 
-// ==========================================
-// 4. نظام خطط الاستثمار
-// ==========================================
-function selectInvestmentPlan(planType) {
-    if (!currentUser.isVerified) {
-        return showToast('⚠️ تنبيه: يرجى إكمال التحقق من الهوية أولاً للاستثمار.', 'error');
-    }
+        .btn-small-3d-buy:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+        }
 
-    currentUser.selectedInvestment = planType;
-    document.getElementById('amount-modal-title').innerText = `استثمار: ${planType}`;
-    document.getElementById('custom-investment-input').value = '';
-    document.getElementById('modern-amount-modal').classList.remove('hidden');
-}
+        .service-card .s-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1), inset 0 2px 3px rgba(255, 255, 255, 0.4);
+            transition: transform 0.2s ease;
+        }
+        
+        .service-card:hover .s-icon {
+            transform: translateY(-2px) scale(1.05);
+        }
 
-function closeAmountModal() {
-    document.getElementById('modern-amount-modal').classList.add('hidden');
-}
+        .service-card.paypal .s-icon { background: linear-gradient(135deg, #0079C1, #00457C); color: #ffffff; }
+        .service-card.exness .s-icon { background: linear-gradient(135deg, #FF5500, #CC3300); color: #ffffff; }
+        .service-card.card-visa .s-icon { background: linear-gradient(135deg, #1A1F71, #0056b3); color: #f79e1b; }
+        .service-card.games .s-icon { background: linear-gradient(135deg, #8B5CF6, #6D28D9); color: #ffffff; }
+        .service-card.intl-transfers .s-icon { background: linear-gradient(135deg, #0284C7, #0369A1); color: #ffffff; }
+        .service-card.bank-issues .s-icon { background: linear-gradient(135deg, #059669, #047857); color: #ffffff; }
 
-function setQuickAmount(val) {
-    document.getElementById('custom-investment-input').value = val;
-}
+        .profile-modal-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 30px;
+            border-radius: 32px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            position: relative;
+        }
 
-function confirmInvestmentAmount() {
-    const inputVal = document.getElementById('custom-investment-input').value.trim();
-    const amount = Number(inputVal);
+        .modal-avatar-area {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 15px;
+        }
 
-    if (!inputVal || isNaN(amount) || amount <= 0) {
-        return showToast('يرجى إدخال مبلغ استثماري صحيح بالـ USDT', 'error');
-    }
+        #modal-user-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #fff;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
 
-    currentUser.investmentAmount = amount;
-    closeAmountModal();
-    showPaymentDetailsModal(currentUser.selectedInvestment, amount);
-}
+        .change-photo-btn {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: #2563eb;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+        }
 
-function showPaymentDetailsModal(planType, amount) {
-    let paymentHTML = `
-        <div id="payment-modal" class="screen active modal-overlay" style="display:flex !important; align-items:center; justify-content:center; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; overflow-y:auto; padding:20px;">
-            <div class="modal-card" style="background:var(--card-bg, #ffffff); color:var(--text-main, #111827); width:100%; max-width:425px; border-radius:20px; padding:20px; text-align:right; box-shadow:0 15px 35px rgba(0,0,0,0.2); position:relative;">
-                <button class="close-modal" onclick="closePaymentModal()" style="position:absolute; top:15px; left:15px; background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-secondary);"><ion-icon name="close"></ion-icon></button>
-                <h3 class="modal-title" style="text-align: center; margin-bottom: 4px; font-size:18px;">تفاصيل الدفع الرقمي</h3>
-                <span class="modal-phone" style="text-align: center; display:block; font-size:13px; color:var(--text-secondary); margin-bottom:15px;">الخطة: <b>${planType}</b> | المبلغ: <b>${amount} USDT</b></span>
-                
-                <div style="background:var(--btn-icon-bg, #f3f4f6); padding:10px; border-radius:10px; margin-bottom:10px; font-size:12px; border:1px solid var(--card-border, #e5e7eb);">
-                    <p style="margin-bottom:4px; font-weight:bold;">1. Binance ID:</p>
-                    <p style="user-select:all; background:var(--card-bg); padding:6px; border-radius:6px; text-align:center; font-family:monospace;">1268802737</p>
-                </div>
+        .modal-title { font-size: 22px; font-weight: 800; margin: 10px 0 2px; color: #111827; }
+        .modal-phone { color: #6b7280; font-size: 14px; }
 
-                <div style="background:var(--btn-icon-bg, #f3f4f6); padding:10px; border-radius:10px; margin-bottom:10px; font-size:12px; border:1px solid var(--card-border, #e5e7eb);">
-                    <p style="margin-bottom:4px; font-weight:bold;">2. شبكة TRC20:</p>
-                    <p style="user-select:all; background:var(--card-bg); padding:6px; border-radius:6px; text-align:center; font-size:11px; font-family:monospace; word-break:break-all;">TPcsk7uJmPcK4oLjnbsnNiJKW1bDDxU1gF</p>
-                </div>
+        .user-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 25px 0;
+        }
 
-                <div style="background:var(--btn-icon-bg, #f3f4f6); padding:10px; border-radius:10px; margin-bottom:14px; font-size:12px; border:1px solid var(--card-border, #e5e7eb);">
-                    <p style="margin-bottom:4px; font-weight:bold;">3. شبكة BEP20:</p>
-                    <p style="user-select:all; background:var(--card-bg); padding:6px; border-radius:6px; text-align:center; font-size:11px; font-family:monospace; word-break:break-all;">0x520a001683acb8758c39e35652bb71e695ff434e</p>
-                </div>
+        .stat-box {
+            background: #f3f4f6;
+            padding: 15px 10px;
+            border-radius: 16px;
+        }
 
-                <button onclick="submitPaymentReceipt('${planType}', ${amount})" class="btn-primary" style="background-color:#10b981; color:#fff; width:100%; padding:12px; border:none; border-radius:10px; font-weight:bold; cursor:pointer; margin-bottom: 8px;">ارفع إيصال الدفع وتأكيد الاشتراك</button>
-                <button onclick="closePaymentModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px;">إلغاء</button>
+        .stat-box span { display: block; font-size: 11px; color: #6b7280; margin-bottom: 5px; }
+        .stat-box strong { font-size: 14px; color: #111827; }
+
+        .payment-methods-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 15px 0;
+            text-align: right;
+        }
+        
+        .payment-method-card {
+            background: var(--card-bg-sub, #f9fafb);
+            border: 1.5px solid var(--card-border, #e5e7eb);
+            padding: 16px 20px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+
+        .payment-method-card:hover {
+            border-color: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.08);
+        }
+
+        .payment-method-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main, #111827);
+        }
+
+        .payment-method-header ion-icon {
+            font-size: 20px;
+            color: #2563eb;
+            transition: transform 0.3s ease;
+        }
+
+        .payment-details-box {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 13px;
+            color: var(--text-secondary, #6b7280);
+            border-top: 0px solid rgba(0,0,0,0.05);
+            margin-top: 0px;
+            padding-top: 0px;
+        }
+
+        .payment-method-card.active-method {
+            border-color: #2563eb;
+            background: rgba(37, 99, 235, 0.03);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
+        }
+
+        .payment-method-card.active-method .payment-details-box {
+            max-height: 100px;
+            opacity: 1;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top-width: 1px;
+        }
+
+        .payment-method-card.active-method .payment-method-header ion-icon {
+            transform: rotate(180deg);
+        }
+
+        .payment-note-box {
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .amount-conversion-display {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: #2563eb;
+            background: rgba(37, 99, 235, 0.06);
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            border-radius: 10px;
+            padding: 8px;
+            margin-top: 10px;
+            margin-bottom: 4px;
+        }
+
+        .amount-conversion-display.dual {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            text-align: center;
+        }
+
+        .amount-conversion-display.dual span {
+            flex: 1;
+        }
+
+        .custom-select-3d {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 12px;
+            border: 1.5px solid var(--card-border, #e5e7eb);
+            background: var(--card-bg-sub, #f9fafb);
+            color: var(--text-main, #111827);
+            font-size: 14px;
+            font-weight: 600;
+            outline: none;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .custom-select-3d:focus {
+            border-color: #2563eb;
+        }
+
+        .custom-input-3d {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 12px;
+            border: 1.5px solid var(--card-border, #e5e7eb);
+            background: var(--card-bg-sub, #f9fafb);
+            color: var(--text-main, #111827);
+            font-size: 13px;
+            outline: none;
+            margin-top: 6px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        .custom-input-3d:focus {
+            border-color: #2563eb;
+        }
+        .profile-verification-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: linear-gradient(135deg,#10b981,#059669);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            box-shadow: 0 4px 10px rgba(16,185,129,.22);
+            vertical-align: middle;
+        }
+        .profile-verification-badge ion-icon {
+            font-size: 14px;
+        }
+        .profile-verification-badge.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- شاشة تسجيل الدخول -->
+    <div id="auth-screen" class="screen active">
+        <div class="auth-box">
+            <h1 class="logo-title">QMB P2P</h1>
+            <p class="subtitle">منصتك المالية المباشرة للخدمات والاستثمار</p>
+
+            <div id="email-step">
+                <input type="email" id="email-input" placeholder="أدخل البريد الإلكتروني (Gmail)">
+                <button onclick="sendOTP()" class="btn-primary">إرسال رمز التحقق</button>
+            </div>
+
+            <div id="otp-step" class="hidden">
+                <input type="number" id="otp-input" inputmode="numeric" autocomplete="one-time-code"
+                       maxlength="6" placeholder="أدخل رمز التحقق المرسل">
+                <button onclick="verifyOTP()" class="btn-primary">تأكيد الرمز</button>
+                <button type="button" id="resend-otp-btn" onclick="sendOTP(true)"
+                        style="margin-top:10px;width:100%;padding:12px;border:0;border-radius:12px;background:#eef2ff;color:#2563eb;font-weight:700;">
+                    إعادة إرسال الرمز
+                </button>
+            </div>
+            <div id="auth-status" style="margin-top:12px;text-align:center;font-size:13px;min-height:20px;"></div>
+
+            <div id="profile-step" class="hidden">
+                <input type="text" id="fullname-input" placeholder="الاسم الكامل">
+                <input type="tel" id="phone-input" placeholder="رقم الهاتف">
+                <button onclick="completeProfile()" class="btn-primary">دخول التطبيق</button>
             </div>
         </div>
-    `;
+    </div>
 
-    let modalWrapper = document.getElementById('dynamic-payment-wrapper');
-    if (!modalWrapper) {
-        modalWrapper = document.createElement('div');
-        modalWrapper.id = 'dynamic-payment-wrapper';
-        document.body.appendChild(modalWrapper);
-    }
-    modalWrapper.innerHTML = paymentHTML;
-}
+    <!-- الشاشة الرئيسية -->
+    <div id="app-screen" class="screen">
+        <header class="app-header">
+            <div class="header-right">
+                <button onclick="logout()" class="icon-btn logout-color" title="تسجيل الخروج"><ion-icon name="log-out-outline"></ion-icon></button>
+                <button onclick="toggleTheme()" class="icon-btn theme-btn" id="theme-toggle-btn">
+                    <ion-icon name="moon-outline" id="theme-icon"></ion-icon>
+                </button>
+            </div>
 
-function closePaymentModal() {
-    const modalWrapper = document.getElementById('dynamic-payment-wrapper');
-    if (modalWrapper) modalWrapper.innerHTML = '';
-}
+            <div id="top-kyc-btn-wrapper">
+                <button id="top-verification-btn" class="binance-verify-pill" onclick="openVerificationModal()" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;">
+                    <ion-icon name="shield-checkmark-outline"></ion-icon>
+                    <span id="top-verify-text">إكمال التحقق</span>
+                </button>
+            </div>
 
-function submitPaymentReceipt(planType, amount) {
-    if (!currentUser.subscriptions.includes(planType)) {
-        currentUser.subscriptions.push(planType);
-    }
-    localStorage.setItem('qmb_logged_user', JSON.stringify(currentUser));
-    updateUIProfile();
-    closePaymentModal();
+            <div class="user-profile" onclick="openProfileModal()">
+                <div class="avatar-wrapper">
+                    <img id="user-avatar-img" src="https://ui-avatars.com/api/?name=Mustafa&background=2563eb&color=fff" alt="صورة العميل" class="avatar-img">
+                    <div class="avatar-upload-icon"><ion-icon name="camera"></ion-icon></div>
+                </div>
+            </div>
+        </header>
 
-    const message = `مرحباً، لقد قمت بالدفع وإرسال إيصال لخطـة الاستثمار:\nالخطة: [ ${planType} ]\nالمبلغ: ${amount} USDT\nاسم العميل: ${currentUser.name}\nرقم الهاتف: ${currentUser.phone}`;
-    const whatsappURL = `https://wa.me/201271915488?text=${encodeURIComponent(message)}`;
-    
-    window.open(whatsappURL, '_blank');
-    showToast("تم تسجيل طلب اشتراكك وتوجيهك لتأكيد الإيصال!");
-}
+        <main class="content">
+            <div class="wallet-card-3d-pro">
+                <div class="glow-orb-1"></div>
+                <div class="glow-orb-2"></div>
+                <div class="wallet-top">
+                    <span class="wallet-label-3d"><ion-icon name="wallet-outline"></ion-icon> سيولة المنصة المتاحة</span>
+                    <button class="eye-btn-3d" onclick="toggleBalance()"><ion-icon id="eye-icon" name="eye-outline"></ion-icon></button>
+                </div>
+                <div class="wallet-balance">
+                    <h2 id="usdt-balance"><small>USDT</small> <span id="liquidity-amount">6,897,544.00</span></h2>
+                    <p id="sdg-balance">≈ SDG 41,730,141,200</p>
+                </div>
+                <div class="wallet-footer-info-clean">
+                    <span class="live-badge-pro"><ion-icon name="pulse-outline"></ion-icon> مباشر وحصري</span>
+                </div>
+            </div>
 
-// ==========================================
-// 5. نظام شراء USDT وطرق الدفع
-// ==========================================
-function openBuyUsdtModal() {
-    if (!currentUser.isVerified) {
-        return showToast('⚠️ تنبيه: يرجى إكمال التحقق من الهوية أولاً للشراء.', 'error');
-    }
-    document.getElementById('buy-amount-input').value = '';
-    document.getElementById('buy-amount-modal').classList.remove('hidden');
-}
+            <div class="promo-banner" onclick="openBigAmountModal()">
+                <div class="promo-content">
+                    <div class="promo-tag">
+                        <ion-icon name="flash"></ion-icon>
+                        <span>خصم 10%</span>
+                    </div>
+                    <div class="promo-text">
+                        <h4>عرض المبالغ الكبيرة 🔥</h4>
+                        <p>احصل على خصم 10% لمعاملات البيع والشراء من <strong>1000 USDT</strong> وما فوق.</p>
+                    </div>
+                </div>
+                <div class="promo-arrow">
+                    <ion-icon name="chevron-back-outline"></ion-icon>
+                </div>
+            </div>
 
-function closeBuyAmountModal() {
-    document.getElementById('buy-amount-modal').classList.add('hidden');
-}
-
-function setBuyQuickAmount(val) {
-    document.getElementById('buy-amount-input').value = val;
-}
-
-function proceedToPaymentMethods() {
-    const inputVal = document.getElementById('buy-amount-input').value.trim();
-    const amount = Number(inputVal);
-
-    if (!inputVal || isNaN(amount) || amount <= 0) {
-        return showToast('يرجى إدخال كمية صحيحة من الـ USDT', 'error');
-    }
-
-    currentUser.buyAmount = amount;
-    closeBuyAmountModal();
-    showPaymentMethodsSelectionModal(amount);
-}
-
-function showPaymentMethodsSelectionModal(amount) {
-    selectedPaymentMethod = "";
-    uploadedReceiptData = null;
-
-    let paymentMethodsHTML = `
-        <div id="buy-methods-modal" class="screen active modal-overlay" style="display:flex !important; align-items:center; justify-content:center; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; overflow-y:auto; padding:20px;">
-            <div class="modal-card" style="background:var(--card-bg, #ffffff); color:var(--text-main, #111827); width:100%; max-width:440px; border-radius:20px; padding:20px; text-align:right; box-shadow:0 15px 35px rgba(0,0,0,0.2); position:relative; max-height:90vh; overflow-y:auto;">
-                <button class="close-modal" onclick="closeBuyMethodsModal()" style="position:absolute; top:15px; left:15px; background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-secondary);"><ion-icon name="close"></ion-icon></button>
-                <h3 class="modal-title" style="text-align: center; margin-bottom: 4px; font-size:18px;">حدد طريقة الدفع المفضله لديك 💳</h3>
-                <span class="modal-phone" style="text-align: center; display:block; font-size:13px; color:var(--text-secondary); margin-bottom:15px;">الكمية المطلوبة: <b>${amount} USDT</b></span>
-                
-                <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;">
-                    <!-- بنكك -->
-                    <label onclick="selectMethodOption('بنكك')" style="display:flex; align-items:flex-start; gap:10px; background:var(--btn-icon-bg, #f3f4f6); padding:12px; border-radius:12px; border:2px solid var(--card-border, #e5e7eb); cursor:pointer; transition:0.2s;">
-                        <input type="radio" name="payment_method_choice" value="بنكك" style="margin-top:3px;">
-                        <div style="font-size:13px; width:100%;">
-                            <strong>١/ بنكك</strong><br>
-                            <span style="color:var(--text-secondary);">رقم الحساب:</span> <code style="user-select:all; background:var(--card-bg); padding:2px 6px; border-radius:4px; font-weight:bold;">6885238</code><br>
-                            <span style="color:var(--text-secondary);">الاسم:</span> مصطفى ادم
+            <div class="interactive-rates">
+                <div class="rate-card-wrapper" style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="rate-card buy-card" onclick="rateCardClick('شراء')">
+                        <div class="rate-icon-wrapper green-bg">
+                            <ion-icon name="trending-up-outline" class="rate-icon green"></ion-icon>
                         </div>
-                    </label>
-
-                    <!-- فوري -->
-                    <label onclick="selectMethodOption('فوري')" style="display:flex; align-items:flex-start; gap:10px; background:var(--btn-icon-bg, #f3f4f6); padding:12px; border-radius:12px; border:2px solid var(--card-border, #e5e7eb); cursor:pointer; transition:0.2s;">
-                        <input type="radio" name="payment_method_choice" value="فوري" style="margin-top:3px;">
-                        <div style="font-size:13px; width:100%;">
-                            <strong>٢/ فوري</strong><br>
-                            <span style="color:var(--text-secondary);">رقم الحساب:</span> <code style="user-select:all; background:var(--card-bg); padding:2px 6px; border-radius:4px; font-weight:bold;">52204397</code><br>
-                            <span style="color:var(--text-secondary);">الاسم:</span> مصطفي ادم
+                        <div class="rate-info">
+                            <span class="rate-label">سعر شراء USDT</span>
+                            <strong class="rate-val green">SDG 6,150</strong>
                         </div>
-                    </label>
-
-                    <!-- اووكاش -->
-                    <label onclick="selectMethodOption('اووكاش')" style="display:flex; align-items:flex-start; gap:10px; background:var(--btn-icon-bg, #f3f4f6); padding:12px; border-radius:12px; border:2px solid var(--card-border, #e5e7eb); cursor:pointer; transition:0.2s;">
-                        <input type="radio" name="payment_method_choice" value="اووكاش" style="margin-top:3px;">
-                        <div style="font-size:13px; width:100%;">
-                            <strong>٣/ اووكاش</strong><br>
-                            <span style="color:var(--text-secondary);">رقم الحساب:</span> <code style="user-select:all; background:var(--card-bg); padding:2px 6px; border-radius:4px; font-weight:bold;">1811805</code><br>
-                            <span style="color:var(--text-secondary);">الاسم:</span> مصطفى ادم
-                        </div>
-                    </label>
-
-                    <!-- ماي كاشي -->
-                    <label onclick="selectMethodOption('ماي كاشي')" style="display:flex; align-items:flex-start; gap:10px; background:var(--btn-icon-bg, #f3f4f6); padding:12px; border-radius:12px; border:2px solid var(--card-border, #e5e7eb); cursor:pointer; transition:0.2s;">
-                        <input type="radio" name="payment_method_choice" value="ماي كاشي" style="margin-top:3px;">
-                        <div style="font-size:13px; width:100%;">
-                            <strong>٤/ ماي كاشي</strong><br>
-                            <span style="color:var(--text-secondary);">رقم الحساب:</span> <code style="user-select:all; background:var(--card-bg); padding:2px 6px; border-radius:4px; font-weight:bold;">400700101</code><br>
-                            <span style="color:var(--text-secondary);">الاسم:</span> مصطفى ادم
-                        </div>
-                    </label>
+                        <div class="rate-status-dot green-dot"></div>
+                    </div>
+                    <div class="action-container-3d">
+                        <button class="btn-small-3d-buy" onclick="openBuyModal()">
+                            <ion-icon name="cart-outline"></ion-icon>
+                            <span>شراء USDT الآن</span>
+                        </button>
+                    </div>
                 </div>
 
-                <div id="receipt-section" style="display:none; flex-direction:column; gap:10px; margin-bottom:15px; border-top:1px dashed var(--card-border); padding-top:12px;">
-                    <label style="font-size:13px; font-weight:bold;">ارفاق اشعار الدفع هنا:</label>
-                    <input type="file" id="payment-receipt-file" accept="image/*" onchange="handleReceiptUpload(event)" style="font-size:12px; padding:8px; border:1px solid var(--card-border); border-radius:8px; background:var(--card-bg); width:100%;">
-                    <div id="receipt-preview-text" style="font-size:11px; color:#10b981; font-weight:bold;"></div>
+                <div class="rate-card-wrapper" style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="rate-card sell-card" onclick="rateCardClick('بيع')">
+                        <div class="rate-icon-wrapper red-bg">
+                            <ion-icon name="trending-down-outline" class="rate-icon red"></ion-icon>
+                        </div>
+                        <div class="rate-info">
+                            <span class="rate-label">سعر بيع USDT</span>
+                            <strong class="rate-val red">SDG 5,950</strong>
+                        </div>
+                        <div class="rate-status-dot red-dot"></div>
+                    </div>
+                    <div class="action-container-3d">
+                        <button class="btn-small-3d-sell" onclick="openSellModal()">
+                            <ion-icon name="arrow-down-circle-outline"></ion-icon>
+                            <span>بيع USDT الآن</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-title">
+                <ion-icon name="trending-up-outline" class="modern-header-icon invest-icon"></ion-icon>
+                <h3>خطط الاستثمار</h3>
+            </div>
+            
+            <div class="invest-grid">
+                <div class="invest-card gold monthly-card-styled" onclick="openInvestmentModal('استثمار شهري')">
+                    <div class="invest-head">
+                        <h4>استثمار شهري</h4>
+                        <span class="rate-badge gold-bg">12% / شهرياً</span>
+                    </div>
+                    <p>أرباح شهرية ثابتة وسحب عند الانتهاء.</p>
+                    <button class="btn-sub gold-btn"><ion-icon name="flash-outline"></ion-icon> استثمار سريع</button>
+                </div>
+
+                <div class="invest-card gold" onclick="openInvestmentModal('استثمار سنوي')">
+                    <div class="invest-head">
+                        <h4>استثمار سنوي</h4>
+                        <span class="rate-badge gold-bg">25% / سنوياً</span>
+                    </div>
+                    <p>أعلى عائد استثماري آمن لمبالغك.</p>
+                    <button class="btn-sub gold-btn"><ion-icon name="shield-checkmark-outline"></ion-icon> استثمر بأمان</button>
+                </div>
+            </div>
+
+            <div class="section-title">
+                <ion-icon name="flash-outline" class="modern-header-icon flash-icon"></ion-icon>
+                <h3>الخدمات المباشرة</h3>
+            </div>
+
+            <div class="services-grid">
+                <div class="service-card paypal" onclick="openPaypalServiceModal()">
+                    <div class="s-icon"><ion-icon name="logo-paypal"></ion-icon></div>
+                    <div class="s-info">
+                        <h4>فتح حساب بايبال</h4>
+                        <p>تفعيل حساب PayPal جاهز للاستلام والسحب</p>
+                    </div>
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                </div>
+
+                <div class="service-card exness" onclick="openExnessServiceModal()">
+                    <div class="s-icon"><ion-icon name="trending-up-outline"></ion-icon></div>
+                    <div class="s-info">
+                        <h4>فتح حساب إكسنيس</h4>
+                        <p>إنشاء وتوثيق حساب للتداول في Exness</p>
+                    </div>
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                </div>
+
+                <div class="service-card card-visa" onclick="openGenericServiceModal('إنشاء فيزا افتراضية', 'بطاقة Mastercard / Visa جاهزة للشراء والتسوق عبر الإنترنت.')">
+                    <div class="s-icon"><ion-icon name="card-outline"></ion-icon></div>
+                    <div class="s-info">
+                        <h4>إنشاء فيزا افتراضية</h4>
+                        <p>بطاقة Mastercard / Visa جاهزة للشراء والتسوق</p>
+                    </div>
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                </div>
+
+                <div class="service-card games" onclick="openGenericServiceModal('دفع اشتراكات الألعاب', 'شحن النقاط والباقات المباشرة لمختلف الألعاب والتطبيقات.')">
+                    <div class="s-icon"><ion-icon name="game-controller-outline"></ion-icon></div>
+                    <div class="s-info">
+                        <h4>دفع اشتراكات الألعاب</h4>
+                        <p>شحن النقاط والباقات في الألعاب والتطبيقات</p>
+                    </div>
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                </div>
+
+                <div class="service-card intl-transfers" onclick="openIntlTransferModal()">
+                    <div class="s-icon"><ion-icon name="globe-outline"></ion-icon></div>
+                    <div class="s-info">
+                        <h4>التحويلات الدولية</h4>
+                        <p>تحويل الأموال فورياً إلى جميع الدول العربية</p>
+                    </div>
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                </div>
+
+                <div class="service-card bank-issues" onclick="openGenericServiceModal('حل مشاكل الحسابات', 'مساعدة واستشارات فنيه وتذليل العقبات لتسوية المعاملات والحسابات المتروكة.')">
+                    <div class="s-icon"><ion-icon name="build-outline"></ion-icon></div>
+                    <div class="s-info">
+                        <h4>حل مشاكل الحسابات</h4>
+                        <p>مساعدة واستشارات لتسوية المعاملات والحسابات</p>
+                    </div>
+                    <ion-icon name="chevron-back-outline" class="arrow"></ion-icon>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- نافذة قسم التحويلات الدولية المعدلة -->
+    <div id="intl-transfer-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; max-height: 90vh; overflow-y: auto; text-align: right;">
+            <button class="close-modal" onclick="closeIntlTransferModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="text-align: center; margin-bottom: 15px;">
+                <div class="modal-icon-badge" style="background: linear-gradient(135deg, #0284C7, #0369A1); color: white;">
+                    <ion-icon name="globe-outline"></ion-icon>
+                </div>
+                <h3>التحويلات الدولية</h3>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;">حدد الدولة وأدخل كافة البيانات المطلوبة لإتمام معاملة التحويل</p>
+            </div>
+
+            <!-- خطوة 1: اختيار الدولة -->
+            <div id="intl-step-country" style="margin-bottom: 15px;">
+                <label style="font-size: 13px; font-weight: bold; color: var(--text-main);">اختر الدولة:</label>
+                <select id="country-select" class="custom-select-3d" onchange="onIntlCountrySelected()">
+                    <option value="" disabled selected>-- اختر الدولة العربية --</option>
+                    <option value="السودان">🇸🇩 السودان</option>
+                    <option value="مصر">🇪🇬 مصر</option>
+                    <option value="المملكة العربية السعودية">🇸🇦 المملكة العربية السعودية</option>
+                    <option value="الإمارات العربية المتحدة">🇦🇪 الإمارات العربية المتحدة</option>
+                    <option value="قطر">🇶🇦 قطر</option>
+                    <option value="الكويت">🇰🇼 الكويت</option>
+                    <option value="سلطنة عمان">🇴🇲 سلطنة عمان</option>
+                    <option value="البحرين">🇧🇭 البحرين</option>
+                    <option value="الأردن">🇯🇴 الأردن</option>
+                    <option value="العراق">🇮🇶 العراق</option>
+                    <option value="لبنان">🇱🇧 لبنان</option>
+                    <option value="فلسطين">🇵🇸 فلسطين</option>
+                    <option value="سوريا">🇸🇾 سوريا</option>
+                    <option value="اليمن">🇾🇪 اليمن</option>
+                    <option value="المغرب">🇲🇦 المغرب</option>
+                    <option value="الجزائر">🇩🇿 الجزائر</option>
+                    <option value="تونس">🇹🇳 تونس</option>
+                    <option value="ليبيا">🇱🇾 ليبيا</option>
+                    <option value="موريتانيا">🇲🇷 موريتانيا</option>
+                    <option value="الصومال">🇸🇴 الصومال</option>
+                    <option value="جيبوتي">🇩🇯 جيبوتي</option>
+                    <option value="جزر القمر">🇰🇲 جزر القمر</option>
+                </select>
+            </div>
+
+            <!-- خطوة 2: نموذج إدخال التفاصيل وطريقة الدفع -->
+            <div id="intl-step-details" class="hidden">
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-main);">المبلغ المراد إرساله:</label>
+                    <input type="number" id="intl-amount" placeholder="أدخل المبلغ" class="custom-input-3d">
+                </div>
+
+                <label style="font-size: 12px; font-weight: bold; color: var(--text-main); display: block; margin-bottom: 5px;">طريقة الدفع المحلية (بيانات حساباتي):</label>
+                <div class="payment-methods-grid" style="margin-top: 5px; margin-bottom: 15px;">
+                    <div class="payment-method-card" id="intl-card-bonk" onclick="toggleIntlLocalCard('بنكك')">
+                        <div class="payment-method-header">
+                            <span>بنكك</span>
+                            <ion-icon name="chevron-down-outline"></ion-icon>
+                        </div>
+                        <div class="payment-details-box">
+                            رقم الحساب: <code>6885238</code><br>
+                            الاسم: مصطفى ادم
+                        </div>
+                    </div>
+
+                    <div class="payment-method-card" id="intl-card-fawry" onclick="toggleIntlLocalCard('فوري')">
+                        <div class="payment-method-header">
+                            <span>فوري</span>
+                            <ion-icon name="chevron-down-outline"></ion-icon>
+                        </div>
+                        <div class="payment-details-box">
+                            رقم الحساب: <code>52204397</code><br>
+                            الاسم: مصطفي ادم
+                        </div>
+                    </div>
+
+                    <div class="payment-method-card" id="intl-card-owocash" onclick="toggleIntlLocalCard('اووكاش')">
+                        <div class="payment-method-header">
+                            <span>اووكاش</span>
+                            <ion-icon name="chevron-down-outline"></ion-icon>
+                        </div>
+                        <div class="payment-details-box">
+                            رقم الحساب: <code>1811805</code><br>
+                            الاسم: مصطفى ادم
+                        </div>
+                    </div>
+
+                    <div class="payment-method-card" id="intl-card-mycashi" onclick="toggleIntlLocalCard('ماي كاشي')">
+                        <div class="payment-method-header">
+                            <span>ماي كاشي</span>
+                            <ion-icon name="chevron-down-outline"></ion-icon>
+                        </div>
+                        <div class="payment-details-box">
+                            رقم الحساب: <code>400700101</code><br>
+                            الاسم: مصطفى ادم
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: var(--card-bg-sub, #f9fafb); padding: 12px; border-radius: 12px; border: 1px solid var(--card-border, #e5e7eb); margin-bottom: 15px;">
+                    <h4 style="font-size: 13px; color: var(--text-main); margin-bottom: 8px; border-bottom: 1px solid var(--card-border); padding-bottom: 4px;">بيانات التحويل</h4>
                     
-                    <button id="paid-confirmation-btn" onclick="finalizeBuyOrder()" class="btn-primary" style="background-color:#10b981; color:#fff; width:100%; padding:12px; border:none; border-radius:10px; font-weight:bold; cursor:pointer; margin-top:5px; display:none;">تم الدفع</button>
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">اسم المرسل:</label>
+                    <input type="text" id="intl-sender-name" placeholder="الاسم الكامل للمرسل" class="custom-input-3d">
+
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">رقم هاتف المرسل:</label>
+                    <input type="tel" id="intl-sender-phone" placeholder="رقم هاتف المرسل" class="custom-input-3d">
+
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">اسم المستلم:</label>
+                    <input type="text" id="intl-receiver-name" placeholder="الاسم الكامل للمستلم" class="custom-input-3d">
+
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">رقم هاتف المستلم:</label>
+                    <input type="tel" id="intl-receiver-phone" placeholder="رقم هاتف المستلم" class="custom-input-3d">
+
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">عنوان المستلم:</label>
+                    <input type="text" id="intl-receiver-address" placeholder="المدينة / العنوان" class="custom-input-3d">
+
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">اسم بنك المستلم:</label>
+                    <input type="text" id="intl-receiver-bank-name" placeholder="اسم البنك التابع للمستلم" class="custom-input-3d">
+
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">رقم حساب بنك المستلم:</label>
+                    <input type="text" id="intl-receiver-bank-account" placeholder="رقم حساب بنك المستلم" class="custom-input-3d" style="margin-bottom:0;">
                 </div>
 
-                <button onclick="closeBuyMethodsModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px;">إلغاء</button>
+                <button onclick="submitIntlTransferToWhatsapp()" class="btn-primary-3d" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 14px; font-size: 15px; width:100%;">
+                    <span>متابعة المعاملة عبر الواتساب</span>
+                    <ion-icon name="logo-whatsapp"></ion-icon>
+                </button>
+            </div>
+
+            <button onclick="closeIntlTransferModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة تفاصيل الخدمات المباشرة العامة -->
+    <div id="generic-service-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; text-align: right;">
+            <button class="close-modal" onclick="closeGenericServiceModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="text-align: center; margin-bottom: 15px;">
+                <div class="modal-icon-badge" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white;">
+                    <ion-icon name="sparkles-outline"></ion-icon>
+                </div>
+                <h3 id="generic-service-title">عنوان الخدمة</h3>
+                <p id="generic-service-desc" style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;"></p>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 15px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--card-border, #e5e7eb);">
+                <h4 style="font-size: 14px; color: var(--text-main); margin-bottom: 8px;">التنفيذ والمتابعة:</h4>
+                <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.6;">تواصل معنا مباشرة لتزويدنا ببيانات التفاصيل وتحديد قيمة الرسوم ورسوم الشحن إن وجدت لبدء المعاملة فوراً.</p>
+            </div>
+
+            <button onclick="submitGenericServiceToWhatsapp()" class="btn-primary-3d" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 14px; font-size: 15px;">
+                <span>متابعة عبر الواتساب</span>
+                <ion-icon name="logo-whatsapp"></ion-icon>
+            </button>
+            <button onclick="closeGenericServiceModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة تفاصيل خدمة فتح حساب بايبال -->
+    <div id="paypal-service-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; text-align: right;">
+            <button class="close-modal" onclick="closePaypalServiceModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="text-align: center; margin-bottom: 15px;">
+                <div class="modal-icon-badge" style="background: linear-gradient(135deg, #0079C1, #00457C); color: white;">
+                    <ion-icon name="logo-paypal"></ion-icon>
+                </div>
+                <h3>فتح حساب بايبال</h3>
+                <p style="font-size: 14px; font-weight: bold; color: #059669; margin-top: 5px;">50 دولار شاملة الضريبة (حساب جاهز موثق بالكامل)</p>
+                <p style="font-size: 13px; font-weight: 600; color: #2563eb; margin-top: 4px;">ما يعادل 302,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 15px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--card-border, #e5e7eb);">
+                <h4 style="font-size: 14px; color: var(--text-main); margin-bottom: 8px;">المتطلبات:</h4>
+                <ul style="padding-right: 20px; font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+                    <li>جواز سفر</li>
+                    <li>بريد إلكتروني</li>
+                    <li>رقم شريحة فعال</li>
+                </ul>
+            </div>
+
+            <button onclick="proceedFromPaypalToPayment()" class="btn-primary-3d" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 14px; font-size: 15px;">
+                <span>إكمال فتح الحساب</span>
+                <ion-icon name="arrow-back-outline"></ion-icon>
+            </button>
+            <button onclick="closePaypalServiceModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة اختيار طريقة الدفع لخدمة بايبال -->
+    <div id="paypal-payment-method-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; text-align: right;">
+            <button class="close-modal" onclick="closePaypalPaymentMethodModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="text-align: center; margin-bottom: 15px;">
+                <h3>طريقة دفع رسوم بايبال</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">اختر طريقة الدفع المناسبة لك لإتمام رسوم الحساب (50$)</p>
+                <p style="font-size: 12px; font-weight: 600; color: #2563eb; margin-top: 3px;">ما يعادل 302,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button onclick="selectPaypalUsdtPayment()" class="btn-primary-3d" style="flex: 1; background: linear-gradient(135deg, #f59e0b, #d97706); font-size: 13px; padding: 12px;">
+                    <ion-icon name="logo-bitcoin"></ion-icon>
+                    <span>الدفع عن طريق USDT</span>
+                </button>
+                <button onclick="selectPaypalLocalPayment()" class="btn-primary-3d" style="flex: 1; background: linear-gradient(135deg, #2563eb, #1d4ed8); font-size: 13px; padding: 12px;">
+                    <ion-icon name="card-outline"></ion-icon>
+                    <span>الدفع المحلي (بنكك/فوري)</span>
+                </button>
+            </div>
+
+            <button onclick="closePaypalPaymentMethodModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة بيانات الدفع USDT الخاصة ببايبال -->
+    <div id="paypal-usdt-gateway-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; max-height: 90vh; overflow-y: auto; text-align: right;">
+            <button class="close-modal" onclick="closePaypalUsdtGateway()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="margin-bottom: 12px;">
+                <h3>بيانات الدفع (USDT)</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">الخدمة: <strong>فتح حساب بايبال</strong> | الرسوم: <strong>50 USDT</strong></p>
+                <p style="font-size: 12px; font-weight: 600; color: #2563eb; margin-top: 3px;">ما يعادل 302,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">Binance ID</span>
+                <strong style="font-size: 13px; color: var(--text-main); user-select: all;">1103631387</strong>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">شبكة TRC20</span>
+                <strong style="font-size: 12px; color: var(--text-main); word-break: break-all; user-select: all;">TPcsk7uJmPcK4oLjnbsnNiJKW1bDDXu1gF</strong>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">شبكة BEP20</span>
+                <strong style="font-size: 12px; color: var(--text-main); word-break: break-all; user-select: all;">0x520a001683acb8758c39e35652bb71e695f434e</strong>
+            </div>
+
+            <div id="paypal-receipt-section" style="margin-top: 15px;">
+                <label for="paypal-receipt-input" class="btn-primary-3d" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 12px; border-radius: 12px; font-weight: bold;">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                    <span id="paypal-receipt-label">إرفاق إيصال الدفع</span>
+                </label>
+                <input type="file" id="paypal-receipt-input" accept="image/*" style="display: none;" onchange="handlePaypalReceiptSelected(event)">
+            </div>
+
+            <button id="btn-paypal-done" class="btn-primary-3d hidden" onclick="submitPaypalOrder()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); margin-top: 10px; padding: 14px; font-size: 15px;">
+                <span>تم الدفع (إكمال فتح حسابك الآن)</span>
+                <ion-icon name="logo-whatsapp"></ion-icon>
+            </button>
+
+            <button onclick="closePaypalUsdtGateway()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة بيانات الدفع المحلي لخدمة بايبال -->
+    <div id="paypal-local-gateway-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; max-height: 90vh; overflow-y: auto; text-align: right;">
+            <button class="close-modal" onclick="closePaypalLocalGateway()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="margin-bottom: 12px;">
+                <h3>اختر طريقة الدفع المحلي</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">الخدمة: <strong>فتح حساب بايبال (50$)</strong></p>
+                <p style="font-size: 12px; font-weight: 600; color: #2563eb; margin-top: 3px;">ما يعادل 302,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div class="payment-methods-grid">
+                <div class="payment-method-card" id="p-card-bonk" onclick="togglePaypalLocalCard('بنكك')">
+                    <div class="payment-method-header">
+                        <span>بنكك</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>6885238</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+
+                <div class="payment-method-card" id="p-card-fawry" onclick="togglePaypalLocalCard('فوري')">
+                    <div class="payment-method-header">
+                        <span>فوري</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>52204397</code><br>
+                        الاسم: مصطفي ادم
+                    </div>
+                </div>
+
+                <div class="payment-method-card" id="p-card-owocash" onclick="togglePaypalLocalCard('اووكاش')">
+                    <div class="payment-method-header">
+                        <span>اووكاش</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>1811805</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+
+                <div class="payment-method-card" id="p-card-mycashi" onclick="togglePaypalLocalCard('ماي كاشي')">
+                    <div class="payment-method-header">
+                        <span>ماي كاشي</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>400700101</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+            </div>
+
+            <div id="paypal-local-receipt-section" class="hidden" style="margin-top: 15px;">
+                <label for="paypal-local-receipt-input" class="btn-primary-3d" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 12px; border-radius: 12px; font-weight: bold;">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                    <span id="paypal-local-receipt-label">إرفاق إيصال الدفع</span>
+                </label>
+                <input type="file" id="paypal-local-receipt-input" accept="image/*" style="display: none;" onchange="handlePaypalLocalReceiptSelected(event)">
+            </div>
+
+            <button id="btn-paypal-local-done" class="btn-primary-3d hidden" onclick="submitPaypalLocalOrder()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); margin-top: 10px; padding: 14px; font-size: 15px;">
+                <span>تم الدفع (إكمال فتح حسابك الآن)</span>
+                <ion-icon name="logo-whatsapp"></ion-icon>
+            </button>
+
+            <button onclick="closePaypalLocalGateway()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة تفاصيل خدمة فتح حساب إكسنيس (Exness) -->
+    <div id="exness-service-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; text-align: right;">
+            <button class="close-modal" onclick="closeExnessServiceModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="text-align: center; margin-bottom: 15px;">
+                <div class="modal-icon-badge" style="background: linear-gradient(135deg, #FF5500, #CC3300); color: white;">
+                    <ion-icon name="trending-up-outline"></ion-icon>
+                </div>
+                <h3>فتح حساب Exness</h3>
+                <p style="font-size: 14px; font-weight: bold; color: #059669; margin-top: 5px;">30 دولار شاملة التوثيق والإنشاء الكامل</p>
+                <p style="font-size: 13px; font-weight: 600; color: #2563eb; margin-top: 4px;">ما يعادل 181,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 15px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--card-border, #e5e7eb);">
+                <h4 style="font-size: 14px; color: var(--text-main); margin-bottom: 8px;">المتطلبات:</h4>
+                <ul style="padding-right: 20px; font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+                    <li>جواز سفر أو بطاقة شخصية</li>
+                    <li>بريد إلكتروني فعال</li>
+                    <li>رقم هاتف مفعل</li>
+                </ul>
+            </div>
+
+            <button onclick="proceedFromExnessToPayment()" class="btn-primary-3d" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 14px; font-size: 15px;">
+                <span>إكمال فتح الحساب</span>
+                <ion-icon name="arrow-back-outline"></ion-icon>
+            </button>
+            <button onclick="closeExnessServiceModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة اختيار طريقة الدفع لخدمة إكسنيس -->
+    <div id="exness-payment-method-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; text-align: right;">
+            <button class="close-modal" onclick="closeExnessPaymentMethodModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="text-align: center; margin-bottom: 15px;">
+                <h3>طريقة دفع رسوم إكسنيس</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">اختر طريقة الدفع المناسبة لك لإتمام رسوم الحساب (30$)</p>
+                <p style="font-size: 12px; font-weight: 600; color: #2563eb; margin-top: 3px;">ما يعادل 181,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button onclick="selectExnessUsdtPayment()" class="btn-primary-3d" style="flex: 1; background: linear-gradient(135deg, #f59e0b, #d97706); font-size: 13px; padding: 12px;">
+                    <ion-icon name="logo-bitcoin"></ion-icon>
+                    <span>الدفع عن طريق USDT</span>
+                </button>
+                <button onclick="selectExnessLocalPayment()" class="btn-primary-3d" style="flex: 1; background: linear-gradient(135deg, #2563eb, #1d4ed8); font-size: 13px; padding: 12px;">
+                    <ion-icon name="card-outline"></ion-icon>
+                    <span>الدفع المحلي (بنكك/فوري)</span>
+                </button>
+            </div>
+
+            <button onclick="closeExnessPaymentMethodModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة بيانات الدفع USDT الخاصة بإكسنيس -->
+    <div id="exness-usdt-gateway-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; max-height: 90vh; overflow-y: auto; text-align: right;">
+            <button class="close-modal" onclick="closeExnessUsdtGateway()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="margin-bottom: 12px;">
+                <h3>بيانات الدفع (USDT)</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">الخدمة: <strong>فتح حساب إكسنيس</strong> | الرسوم: <strong>30 USDT</strong></p>
+                <p style="font-size: 12px; font-weight: 600; color: #2563eb; margin-top: 3px;">ما يعادل 181,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">Binance ID</span>
+                <strong style="font-size: 13px; color: var(--text-main); user-select: all;">1103631387</strong>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">شبكة TRC20</span>
+                <strong style="font-size: 12px; color: var(--text-main); word-break: break-all; user-select: all;">TPcsk7uJmPcK4oLjnbsnNiJKW1bDDXu1gF</strong>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">شبكة BEP20</span>
+                <strong style="font-size: 12px; color: var(--text-main); word-break: break-all; user-select: all;">0x520a001683acb8758c39e35652bb71e695f434e</strong>
+            </div>
+
+            <div id="exness-receipt-section" style="margin-top: 15px;">
+                <label for="exness-receipt-input" class="btn-primary-3d" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 12px; border-radius: 12px; font-weight: bold;">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                    <span id="exness-receipt-label">إرفاق إيصال الدفع</span>
+                </label>
+                <input type="file" id="exness-receipt-input" accept="image/*" style="display: none;" onchange="handleExnessReceiptSelected(event)">
+            </div>
+
+            <button id="btn-exness-done" class="btn-primary-3d hidden" onclick="submitExnessOrder()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); margin-top: 10px; padding: 14px; font-size: 15px;">
+                <span>تم الدفع (إكمال فتح حسابك الآن)</span>
+                <ion-icon name="logo-whatsapp"></ion-icon>
+            </button>
+
+            <button onclick="closeExnessUsdtGateway()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة بيانات الدفع المحلي لخدمة إكسنيس -->
+    <div id="exness-local-gateway-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; max-height: 90vh; overflow-y: auto; text-align: right;">
+            <button class="close-modal" onclick="closeExnessLocalGateway()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="margin-bottom: 12px;">
+                <h3>اختر طريقة الدفع المحلي</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">الخدمة: <strong>فتح حساب إكسنيس (30$)</strong></p>
+                <p style="font-size: 12px; font-weight: 600; color: #2563eb; margin-top: 3px;">ما يعادل 181,500 SDG (بسعر شراء USDT اليوم)</p>
+            </div>
+
+            <div class="payment-methods-grid">
+                <div class="payment-method-card" id="ex-card-bonk" onclick="toggleExnessLocalCard('بنكك')">
+                    <div class="payment-method-header">
+                        <span>بنكك</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>6885238</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+
+                <div class="payment-method-card" id="ex-card-fawry" onclick="toggleExnessLocalCard('فوري')">
+                    <div class="payment-method-header">
+                        <span>فوري</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>52204397</code><br>
+                        الاسم: مصطفي ادم
+                    </div>
+                </div>
+
+                <div class="payment-method-card" id="ex-card-owocash" onclick="toggleExnessLocalCard('اووكاش')">
+                    <div class="payment-method-header">
+                        <span>اووكاش</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>1811805</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+
+                <div class="payment-method-card" id="ex-card-mycashi" onclick="toggleExnessLocalCard('ماي كاشي')">
+                    <div class="payment-method-header">
+                        <span>ماي كاشي</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>400700101</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+            </div>
+
+            <div id="exness-local-receipt-section" class="hidden" style="margin-top: 15px;">
+                <label for="exness-local-receipt-input" class="btn-primary-3d" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 12px; border-radius: 12px; font-weight: bold;">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                    <span id="exness-local-receipt-label">إرفاق إيصال الدفع</span>
+                </label>
+                <input type="file" id="exness-local-receipt-input" accept="image/*" style="display: none;" onchange="handleExnessLocalReceiptSelected(event)">
+            </div>
+
+            <button id="btn-exness-local-done" class="btn-primary-3d hidden" onclick="submitExnessLocalOrder()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); margin-top: 10px; padding: 14px; font-size: 15px;">
+                <span>تم الدفع (إكمال فتح حسابك الآن)</span>
+                <ion-icon name="logo-whatsapp"></ion-icon>
+            </button>
+
+            <button onclick="closeExnessLocalGateway()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة عرض المبالغ الكبيرة -->
+    <div id="big-amount-modal" class="modal-overlay hidden">
+        <div class="modal-card amount-modal-card-3d">
+            <button class="close-modal" onclick="closeBigAmountModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header">
+                <div class="modal-icon-badge" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;">
+                    <ion-icon name="flash"></ion-icon>
+                </div>
+                <h3>عرض المبالغ الكبيرة (خصم 10%)</h3>
+                <p>الحد الأدنى للطلب هو <strong>1000 USDT</strong> وما فوق</p>
+            </div>
+
+            <div class="amount-input-group-3d">
+                <span class="currency-tag-3d">USDT</span>
+                <input type="number" id="big-quantity-input" placeholder="1000" min="1000" step="any" oninput="updateBigConversion()">
+            </div>
+
+            <div class="amount-conversion-display dual">
+                <span id="big-sdg-buy">شراء ≈ 0 SDG</span>
+                <span id="big-sdg-sell">بيع ≈ 0 SDG</span>
+            </div>
+
+            <div class="amount-quick-chips">
+                <button type="button" onclick="setBigQuickAmount(1000)">1,000</button>
+                <button type="button" onclick="setBigQuickAmount(2500)">2,500</button>
+                <button type="button" onclick="setBigQuickAmount(5000)">5,000</button>
+                <button type="button" onclick="setBigQuickAmount(10000)">10,000</button>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button onclick="proceedBigAmountBuy()" class="btn-primary-3d" style="flex: 1; background: linear-gradient(135deg, #10b981, #059669);">
+                    <span>شراء</span>
+                    <ion-icon name="cart-outline"></ion-icon>
+                </button>
+                <button onclick="proceedBigAmountSell()" class="btn-primary-3d" style="flex: 1; background: linear-gradient(135deg, #ef4444, #dc2626);">
+                    <span>بيع</span>
+                    <ion-icon name="wallet-outline"></ion-icon>
+                </button>
             </div>
         </div>
-    `;
+    </div>
 
-    let wrapper = document.getElementById('dynamic-buy-methods-wrapper');
-    if (!wrapper) {
-        wrapper = document.createElement('div');
-        wrapper.id = 'dynamic-buy-methods-wrapper';
-        document.body.appendChild(wrapper);
-    }
-    wrapper.innerHTML = paymentMethodsHTML;
-}
+    <!-- نافذة شراء USDT -->
+    <div id="buy-amount-modal" class="modal-overlay hidden">
+        <div class="modal-card amount-modal-card-3d">
+            <button class="close-modal" onclick="closeBuyModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header">
+                <div class="modal-icon-badge">
+                    <ion-icon name="cart"></ion-icon>
+                </div>
+                <h3>حدد الكمية التي تريد شراؤها</h3>
+                <p>أدخل عدد الـ USDT المطلوبة لمتابعة الشراء</p>
+            </div>
 
-function selectMethodOption(methodName) {
-    selectedPaymentMethod = methodName;
-    const receiptSection = document.getElementById('receipt-section');
-    if (receiptSection) {
-        receiptSection.style.display = 'flex';
-    }
-}
+            <div class="amount-input-group-3d">
+                <span class="currency-tag-3d">USDT</span>
+                <input type="number" id="buy-quantity-input" placeholder="0.00" min="1" step="any" oninput="updateBuyConversion()">
+            </div>
 
-function handleReceiptUpload(event) {
-    const file = event.target.files[0];
-    if (file) {
-        uploadedReceiptData = file.name;
-        const previewText = document.getElementById('receipt-preview-text');
-        const paidBtn = document.getElementById('paid-confirmation-btn');
-        if (previewText) previewText.innerText = `✔ تم إرفاق الملف: ${file.name}`;
-        if (paidBtn) paidBtn.style.display = 'block';
-        showToast("تم إرفاق الإشعار بنجاح");
-    }
-}
+            <div class="amount-conversion-display" id="buy-sdg-conversion">≈ 0 SDG</div>
 
-function closeBuyMethodsModal() {
-    const wrapper = document.getElementById('dynamic-buy-methods-wrapper');
-    if (wrapper) wrapper.innerHTML = '';
-}
+            <div class="amount-quick-chips">
+                <button type="button" onclick="setBuyQuickAmount(100)">100</button>
+                <button type="button" onclick="setBuyQuickAmount(500)">500</button>
+                <button type="button" onclick="setBuyQuickAmount(1000)">1,000</button>
+                <button type="button" onclick="setBuyQuickAmount(5000)">5,000</button>
+            </div>
 
-function finalizeBuyOrder() {
-    if (!selectedPaymentMethod) {
-        return showToast('يرجى اختيار طريقة الدفع أولاً', 'error');
-    }
-    if (!uploadedReceiptData) {
-        return showToast('يرجى إرفاق إشعار الدفع أولاً', 'error');
-    }
+            <button onclick="proceedToBuyPaymentGateway()" class="btn-primary-3d">
+                <span>متابعة لبيانات الدفع</span>
+                <ion-icon name="arrow-back-outline"></ion-icon>
+            </button>
+        </div>
+    </div>
 
-    closeBuyMethodsModal();
+    <!-- نافذة تحديد كمية البيع أو الاستثمار -->
+    <div id="sell-amount-modal" class="modal-overlay hidden">
+        <div class="modal-card amount-modal-card-3d">
+            <button class="close-modal" onclick="closeSellModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header">
+                <div class="modal-icon-badge">
+                    <ion-icon name="wallet"></ion-icon>
+                </div>
+                <h3 id="investment-modal-title">حدد الكمية التي تريد بيعها</h3>
+                <p>أدخل عدد الـ USDT المطلوبة للمتابعة</p>
+            </div>
 
-    const message = `مرحباً، لقد قمت بشراء وتحويل مبلغ عبر طريقة الدفع:\nطريقة الدفع: [ ${selectedPaymentMethod} ]\nالكمية: ${currentUser.buyAmount} USDT\nاسم العميل: ${currentUser.name}\nرقم الهاتف: ${currentUser.phone}\nتم إرفاق الإشعار بنجاح.`;
-    const whatsappURL = `https://wa.me/201271915488?text=${encodeURIComponent(message)}`;
-    
-    window.open(whatsappURL, '_blank');
-    showToast("تم إرسال تفاصيل الطلب وتوجيهك إلى واتساب بنجاح!");
-}
+            <div class="amount-input-group-3d">
+                <span class="currency-tag-3d">USDT</span>
+                <input type="number" id="sell-quantity-input" placeholder="0.00" min="1" step="any" oninput="updateSellConversion()">
+            </div>
 
-// ==========================================
-// 6. الوظائف العامة والتنقل
-// ==========================================
-function updatePlatformLiquidity() {
-    const usdtElem = document.getElementById('usdt-balance');
-    const sdgElem = document.getElementById('sdg-balance');
-    
-    if (usdtElem && sdgElem) {
-        usdtElem.innerHTML = `<small>USDT</small> ${platformUSDT.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-        sdgElem.innerText = `≈ SDG ${platformSDG.toLocaleString('en-US')}`;
-    }
-}
+            <div class="amount-conversion-display" id="sell-sdg-conversion">≈ 0 SDG</div>
 
-function openProfileModal() {
-    document.getElementById('profile-modal').classList.remove('hidden');
-    updateUIProfile();
-}
+            <div class="amount-quick-chips">
+                <button type="button" onclick="setSellQuickAmount(100)">100</button>
+                <button type="button" onclick="setSellQuickAmount(500)">500</button>
+                <button type="button" onclick="setSellQuickAmount(1000)">1,000</button>
+                <button type="button" onclick="setSellQuickAmount(5000)">5,000</button>
+            </div>
 
-function closeProfileModal() {
-    document.getElementById('profile-modal').classList.add('hidden');
-}
+            <button onclick="proceedToPaymentGateway()" class="btn-primary-3d">
+                <span>متابعة إلى بيانات الدفع</span>
+                <ion-icon name="arrow-back-outline"></ion-icon>
+            </button>
+        </div>
+    </div>
 
-function uploadAvatar(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            currentUser.avatar = e.target.result;
-            localStorage.setItem('qmb_logged_user', JSON.stringify(currentUser));
-            updateUIProfile();
-            showToast("تم تحديث صورة الملف الشخصي بنجاح");
-        };
-        reader.readAsDataURL(file);
-    }
-}
+    <!-- نافذة بيانات الدفع وإرسال الإيصال (الشراء) -->
+    <div id="buy-payment-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; max-height: 90vh; overflow-y: auto;">
+            <button class="close-modal" onclick="closeBuyPaymentModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="margin-bottom: 8px;">
+                <h3>اختر طريقة الدفع المفضلة 💳</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">العملية: <strong id="display-buy-type" style="color: var(--text-main);">شراء USDT</strong> | الكمية: <strong id="display-buy-qty" style="color: var(--text-main);">0</strong> USDT</p>
+            </div>
 
-function rateCardClick(type) {
-    openChatWithContext(`طلب ${type} USDT بسعر السوق`);
-}
+            <div class="payment-note-box">ملاحظه❗ الرجاء الكتابه علي تعليق الأشعار *مقابل خدمه مكتلمه من مصطفي*</div>
 
-function navigateTo(screenId) {
-    const screens = document.querySelectorAll('.screen');
-    screens.forEach(s => s.classList.remove('active'));
-    const targetScreen = document.getElementById(screenId);
-    if (targetScreen) {
-        targetScreen.classList.add('active');
-        window.scrollTo(0, 0);
-    }
-}
+            <div class="payment-methods-grid">
+                <div class="payment-method-card" id="card-bonk" onclick="togglePaymentCard('بنكك')">
+                    <div class="payment-method-header">
+                        <span>بنكك</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>6885238</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
 
-let isBalanceHidden = false;
-function toggleBalance() {
-    const usdt = document.getElementById('usdt-balance');
-    const sdg = document.getElementById('sdg-balance');
-    const icon = document.getElementById('eye-icon');
-    if (!isBalanceHidden) {
-        usdt.innerText = 'USDT ••••••';
-        sdg.innerText = 'SDG ••••••••••';
-        icon.setAttribute('name', 'eye-off-outline');
-        isBalanceHidden = true;
-    } else {
-        updatePlatformLiquidity();
-        icon.setAttribute('name', 'eye-outline');
-        isBalanceHidden = false;
-    }
-}
+                <div class="payment-method-card" id="card-fawry" onclick="togglePaymentCard('فوري')">
+                    <div class="payment-method-header">
+                        <span>فوري</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>52204397</code><br>
+                        الاسم: مصطفي ادم
+                    </div>
+                </div>
 
-function openChatWithContext(serviceName) {
-    const message = `مرحباً، أريـد طلب أو الاستفسار عن خدمة: [ ${serviceName} ]\nاسم العميل: ${currentUser.name}\nرقم الهاتف: ${currentUser.phone}`;
-    const whatsappURL = `https://wa.me/201271915488?text=${encodeURIComponent(message)}`;
-    window.open(whatsappURL, '_blank');
-}
+                <div class="payment-method-card" id="card-owocash" onclick="togglePaymentCard('اووكاش')">
+                    <div class="payment-method-header">
+                        <span>اووكاش</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>1811805</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
 
-document.addEventListener('DOMContentLoaded', () => {
-    loadSavedTheme();
-    checkLoginState();
-    updatePlatformLiquidity();
-});
+                <div class="payment-method-card" id="card-mycashi" onclick="togglePaymentCard('ماي كاشي')">
+                    <div class="payment-method-header">
+                        <span>ماي كاشي</span>
+                        <ion-icon name="chevron-down-outline"></ion-icon>
+                    </div>
+                    <div class="payment-details-box">
+                        رقم الحساب: <code>400700101</code><br>
+                        الاسم: مصطفى ادم
+                    </div>
+                </div>
+            </div>
+
+            <div id="receipt-upload-section" class="hidden" style="margin-top: 15px;">
+                <label for="buy-receipt-file-input" class="btn-primary-3d" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 12px; border-radius: 12px; font-weight: bold;">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                    <span id="receipt-label-text">إرفاق إشعار الدفع هنا</span>
+                </label>
+                <input type="file" id="buy-receipt-file-input" accept="image/*" style="display: none;" onchange="handleReceiptSelected(event)">
+            </div>
+
+            <button id="btn-done-payment" class="btn-primary-3d hidden" onclick="submitPaymentAndOpenWhatsApp()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); margin-top: 10px; padding: 14px; font-size: 15px;">
+                <span>تم الدفع (إرسال للواتساب)</span>
+                <ion-icon name="logo-whatsapp"></ion-icon>
+            </button>
+
+            <button onclick="closeBuyPaymentModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة بيانات الدفع الخاصة بالبيع -->
+    <div id="sell-payment-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width: 420px; max-height: 90vh; overflow-y: auto; text-align: right;">
+            <button class="close-modal" onclick="closePaymentModal()"><ion-icon name="close"></ion-icon></button>
+            <div class="amount-modal-header" style="margin-bottom: 12px;">
+                <h3>بيانات الدفع</h3>
+                <p style="font-size: 12px; color: var(--text-secondary);">العملية: <strong id="display-process-type" style="color: var(--text-main);">بيع USDT</strong> | الكمية: <strong id="display-sell-qty" style="color: var(--text-main);">0</strong> USDT</p>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">Binance ID</span>
+                <strong style="font-size: 13px; color: var(--text-main); user-select: all;">1103631387</strong>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">شبكة TRC20</span>
+                <strong style="font-size: 12px; color: var(--text-main); word-break: break-all; user-select: all;">TPcsk7uJmPcK4oLjnbsnNiJKW1bDDXu1gF</strong>
+            </div>
+
+            <div style="background: var(--card-bg-sub, #f9fafb); padding: 10px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--card-border, #e5e7eb);">
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">شبكة BEP20</span>
+                <strong style="font-size: 12px; color: var(--text-main); word-break: break-all; user-select: all;">0x520a001683acb8758c39e35652bb71e695f434e</strong>
+            </div>
+
+            <div id="sell-receipt-upload-section" style="margin-top: 15px;">
+                <label for="receipt-file-input" class="btn-primary-3d" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: white; padding: 12px; border-radius: 12px; font-weight: bold;">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                    <span id="sell-receipt-label-text">إرفاق إيصال الدفع</span>
+                </label>
+                <input type="file" id="receipt-file-input" accept="image/*" style="display: none;" onchange="handleSellReceiptSelected(event)">
+            </div>
+
+            <button id="btn-done-sell-payment" class="btn-primary-3d hidden" onclick="submitSellPaymentAndOpenWhatsApp()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); margin-top: 10px; padding: 14px; font-size: 15px;">
+                <span>تم الدفع (إرسال للواتساب)</span>
+                <ion-icon name="logo-whatsapp"></ion-icon>
+            </button>
+
+            <button onclick="closePaymentModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--card-border); color:var(--text-secondary); border-radius:10px; cursor:pointer; font-size:12px; margin-top: 10px;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة إكمال التحقق KYC -->
+    <div id="verification-modal" class="modal-overlay hidden">
+        <div class="modal-card verify-modal-3d" style="max-width:440px;max-height:92vh;overflow-y:auto;text-align:right;">
+            <button class="close-modal" onclick="closeVerificationModal()"><ion-icon name="close"></ion-icon></button>
+
+            <div class="amount-modal-header" style="text-align:center;">
+                <div class="modal-icon-badge" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;">
+                    <ion-icon name="shield-checkmark-outline"></ion-icon>
+                </div>
+                <h3>توثيق الهوية (KYC)</h3>
+                <p>أكمل بيانات الهوية وارفع المستندات المطلوبة للمراجعة.</p>
+            </div>
+
+            <div class="kyc-warning-box">
+                🔒 بيانات التحقق مخصصة لمراجعة الهوية فقط. تأكد أن الصور واضحة وكاملة وغير مقصوصة.
+            </div>
+
+            <label style="font-size:12px;font-weight:700;color:var(--text-main);">نوع إثبات الهوية</label>
+            <select id="kyc-document-type" class="custom-select-3d" style="margin-top:6px;" onchange="localStorage.setItem('qmb_kyc_document_type', this.value); updateKycCompleteButton(); updateKycSelectedStatus();">
+                <option value="">-- اختر نوع إثبات الهوية --</option>
+                <option value="passport">جواز السفر</option>
+                <option value="national_id">الهوية الوطنية</option>
+                <option value="driver_license">رخصة القيادة</option>
+            </select>
+
+            <label style="font-size:12px;font-weight:700;color:var(--text-main);display:block;margin-top:10px;">صورة إثبات الهوية</label>
+            <label for="kyc-front-upload-input" class="btn-primary-3d"
+                   style="margin-top:6px;margin-bottom:12px;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:#fff;padding:13px;border-radius:12px;font-weight:bold;">
+                <ion-icon name="camera-outline"></ion-icon>
+                <span id="kyc-front-label">رفع صورة إثبات الهوية</span>
+            </label>
+            <input type="file" id="kyc-front-upload-input" accept="image/jpeg,image/png,image/webp"
+                   style="display:none;" onchange="handleKycFileUpload(event,'front')">
+
+            <label style="font-size:12px;font-weight:700;color:var(--text-main);display:block;">سيلفي الوجه للتحقق</label>
+            <label for="kyc-selfie-upload-input" class="btn-primary-3d"
+                   style="margin-top:6px;margin-bottom:12px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:#fff;padding:13px;border-radius:12px;font-weight:bold;">
+                <ion-icon name="person-circle-outline"></ion-icon>
+                <span id="kyc-selfie-label">رفع سيلفي الوجه</span>
+            </label>
+            <input type="file" id="kyc-selfie-upload-input" accept="image/jpeg,image/png,image/webp"
+                   style="display:none;" onchange="handleKycFileUpload(event,'selfie')">
+
+            <div id="kyc-selected-status" style="font-size:12px;color:var(--text-secondary);background:var(--card-bg-sub,#f9fafb);border:1px solid var(--card-border,#e5e7eb);border-radius:12px;padding:10px;margin-bottom:12px;">
+                اختر نوع إثبات الهوية وارفع صورة الإثبات وسيلفي الوجه.
+            </div>
+
+            <button id="kyc-complete-btn" onclick="completeKycVerification()" class="btn-primary-3d" disabled
+                    style="background:linear-gradient(135deg,#94a3b8,#64748b);opacity:.65;cursor:not-allowed;width:100%;padding:14px;font-size:15px;">
+                <ion-icon name="shield-checkmark-outline"></ion-icon>
+                <span>إكمال التحقق</span>
+            </button>
+
+            <p style="font-size:11px;color:var(--text-secondary);text-align:center;margin:10px 0 0;line-height:1.5;">
+                الرجاء التأكد من رفع مستندك الأصلي بوضوح وكاملًا لعدم حصول أي مشاكل في الحساب.
+            </p>
+
+            <button onclick="closeVerificationModal()" style="width:100%;padding:10px;background:transparent;border:1px solid var(--card-border);color:var(--text-secondary);border-radius:10px;cursor:pointer;font-size:12px;margin-top:8px;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة تنبيه عدم إكمال التحقق -->
+    <div id="investment-kyc-alert-modal" class="success-overlay">
+        <div class="success-card-3d">
+            <div class="success-icon-3d" style="background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 8px 16px rgba(245, 158, 11, 0.35);">
+                <ion-icon name="shield-alert-outline"></ion-icon>
+            </div>
+            <h3>تنبيه الأمان</h3>
+            <p>اكمل التحقق لبدء الاستثمار مع QMB</p>
+            <button class="btn-home" onclick="closeInvestmentKycAlert()">إكمال التحقق الآن</button>
+        </div>
+    </div>
+
+    <!-- نافذة النجاح -->
+    <div class="success-overlay" id="successOverlay">
+        <div class="success-card-3d">
+            <div class="success-icon-3d">✓</div>
+            <h3>تم التحقق</h3>
+            <p>تم استلام مستندك ويتم مراجعته</p>
+            <button class="btn-home" onclick="returnToHomeScreen()">الرجوع الي الشاشة الرئيسيه</button>
+        </div>
+    </div>
+
+    <!-- نافذة التنبيه -->
+    <div id="custom-alert-modal" class="success-overlay">
+        <div class="success-card-3d">
+            <div class="success-icon-3d" style="background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 8px 16px rgba(245, 158, 11, 0.35);">!</div>
+            <h3>تنبيه هام</h3>
+            <p>الحد الأدنى لعرض المبالغ الكبيرة هو 1000 USDT</p>
+            <button class="btn-home" onclick="closeCustomAlert()">موافق</button>
+        </div>
+    </div>
+
+    <!-- نافذة الملف الشخصي -->
+    <div id="profile-modal" class="modal-overlay hidden">
+        <div class="profile-modal-content">
+            <button class="close-modal" onclick="closeProfileModal()" style="position: absolute; top: 15px; left: 15px; background: none; border: none; font-size: 24px; cursor: pointer;"><ion-icon name="close"></ion-icon></button>
+            
+            <div class="modal-avatar-area">
+                <img id="modal-user-img" src="https://ui-avatars.com/api/?name=Uf&background=2563eb&color=fff" alt="صورة العميل">
+                <label for="change-avatar-input" class="change-photo-btn">
+                    <ion-icon name="camera"></ion-icon>
+                </label>
+                <input type="file" id="change-avatar-input" accept="image/*" class="hidden" onchange="uploadAvatar(event)">
+            </div>
+            
+            <div style="display:flex;align-items:center;justify-content:center;gap:7px;margin-top:10px;">
+                <h3 id="modal-user-name" class="modal-title" style="margin:0;">Ufhif</h3>
+                <span id="profile-verification-badge" class="profile-verification-badge hidden" title="حساب موثق">
+                    <ion-icon name="checkmark-circle"></ion-icon>
+                    <span>موثق</span>
+                </span>
+            </div>
+            <span class="modal-phone" id="modal-user-phone">999986</span>
+
+            <div class="user-stats-grid">
+                <div class="stat-box">
+                    <span>حالة الحساب</span>
+                    <strong id="account-status-text">غير موثق ❌</strong>
+                </div>
+                <div class="stat-box">
+                    <span>تاريخ الانضمام</span>
+                    <strong id="modal-user-date">أغسطس 2026</strong>
+                </div>
+            </div>
+
+            <div class="subscriptions-section" style="text-align: right;">
+                <h4 style="font-size: 14px; color: #374151; margin-bottom: 10px;">الاشتراكات النشطة:</h4>
+                <div id="active-subscriptions" class="subscriptions-list">
+                    <p style="color: #9ca3af; font-size: 13px; text-align: center; padding: 10px; border: 1px dashed #d1d5db; border-radius: 12px;">لا توجد اشتراكات حالياً</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <div id="dynamic-payment-wrapper"></div>
+
+    <script src="app.js"></script>
+    <script>
+        function updatePlatformLiquidity() {
+            const minLimit = 9000000;
+            const randomLiquidity = Math.floor(Math.random() * 1000000) + minLimit;
+            const formattedLiquidity = randomLiquidity.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            const liquidityElement = document.getElementById('liquidity-amount');
+            if (liquidityElement) {
+                liquidityElement.innerText = formattedLiquidity;
+            }
+        }
+
+
+        /* =========================================================
+           QMB P2P - Appwrite Email OTP Authentication
+           Project: QMB P2P
+           Project ID: 6a7911fb00019874bd64
+           Web Hostname: qmbsdg-netizen.github.io
+           ========================================================= */
+
+        const QMB_APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
+        const QMB_APPWRITE_PROJECT_ID = "6a7911fb00019874bd64";
+
+        let qmbAppwriteClient = null;
+        let qmbAccount = null;
+        let qmbOtpUserId = sessionStorage.getItem("qmb_otp_user_id") || "";
+        let qmbOtpEmail = sessionStorage.getItem("qmb_otp_email") || "";
+        let qmbOtpCooldownTimer = null;
+        let qmbOtpSending = false;
+        let qmbOtpVerifying = false;
+
+        function initQMBAppwrite() {
+            if (!window.Appwrite || !window.Appwrite.Client || !window.Appwrite.Account) {
+                throw new Error("تعذر تحميل Appwrite SDK. تأكد من اتصال الإنترنت.");
+            }
+
+            if (!qmbAppwriteClient) {
+                qmbAppwriteClient = new Appwrite.Client()
+                    .setEndpoint(QMB_APPWRITE_ENDPOINT)
+                    .setProject(QMB_APPWRITE_PROJECT_ID);
+
+                qmbAccount = new Appwrite.Account(qmbAppwriteClient);
+            }
+
+            return qmbAccount;
+        }
+
+        function setAuthStatus(message, type = "info") {
+            const el = document.getElementById("auth-status");
+            if (!el) return;
+
+            const colors = {
+                info: "#6b7280",
+                success: "#059669",
+                error: "#dc2626"
+            };
+
+            el.textContent = message || "";
+            el.style.color = colors[type] || colors.info;
+        }
+
+        function setAuthButtonLoading(button, loadingText, defaultText) {
+            if (!button) return;
+            button.disabled = loadingText !== null;
+            button.textContent = loadingText === null ? defaultText : loadingText;
+            button.style.opacity = loadingText !== null ? "0.7" : "1";
+        }
+
+        function showAuthStep(step) {
+            const emailStep = document.getElementById("email-step");
+            const otpStep = document.getElementById("otp-step");
+            const profileStep = document.getElementById("profile-step");
+
+            if (emailStep) emailStep.classList.toggle("hidden", step !== "email");
+            if (otpStep) otpStep.classList.toggle("hidden", step !== "otp");
+            if (profileStep) profileStep.classList.toggle("hidden", step !== "profile");
+        }
+
+        function showQMBAppScreen() {
+            const authScreen = document.getElementById("auth-screen");
+            const appScreen = document.getElementById("app-screen");
+
+            if (authScreen) authScreen.classList.remove("active");
+            if (appScreen) appScreen.classList.add("active");
+        }
+
+        function showQMBAuthScreen() {
+            const authScreen = document.getElementById("auth-screen");
+            const appScreen = document.getElementById("app-screen");
+
+            if (appScreen) appScreen.classList.remove("active");
+            if (authScreen) authScreen.classList.add("active");
+        }
+
+        function normalizeQMBEmail(value) {
+            return String(value || "").trim().toLowerCase();
+        }
+
+        function isValidQMBEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        async function sendOTP(isResend = false) {
+            if (qmbOtpSending) return;
+
+            const emailInput = document.getElementById("email-input");
+            const sendButton = emailInput?.parentElement?.querySelector("button");
+            const email = normalizeQMBEmail(emailInput?.value);
+
+            if (!isValidQMBEmail(email)) {
+                setAuthStatus("أدخل بريدًا إلكترونيًا صحيحًا.", "error");
+                emailInput?.focus();
+                return;
+            }
+
+            if (!isResend && qmbOtpCooldownTimer) {
+                setAuthStatus("انتظر قليلًا قبل طلب رمز جديد.", "error");
+                return;
+            }
+
+            try {
+                qmbOtpSending = true;
+                setAuthStatus("جاري إرسال رمز التحقق إلى بريدك...", "info");
+                setAuthButtonLoading(sendButton, "جاري الإرسال...", "إرسال رمز التحقق");
+
+                const account = initQMBAppwrite();
+
+                // Appwrite creates a user automatically if this email is new.
+                // The returned secret is kept only in Appwrite's flow; it is never shown.
+                const token = await account.createEmailToken(
+                    Appwrite.ID.unique(),
+                    email,
+                    false
+                );
+
+                qmbOtpUserId = token.userId;
+                qmbOtpEmail = email;
+
+                sessionStorage.setItem("qmb_otp_user_id", qmbOtpUserId);
+                sessionStorage.setItem("qmb_otp_email", qmbOtpEmail);
+
+                const otpInput = document.getElementById("otp-input");
+                if (otpInput) {
+                    otpInput.value = "";
+                    otpInput.focus();
+                }
+
+                showAuthStep("otp");
+                setAuthStatus("تم إرسال رمز من 6 أرقام إلى بريدك الإلكتروني. افحص الوارد والرسائل غير المرغوب فيها.", "success");
+
+                startQMBResendCooldown(60);
+            } catch (error) {
+                console.error("QMB Appwrite send OTP error:", error);
+                setAuthStatus(getQMBAuthErrorMessage(error), "error");
+            } finally {
+                qmbOtpSending = false;
+                setAuthButtonLoading(sendButton, null, "إرسال رمز التحقق");
+            }
+        }
+
+        function startQMBResendCooldown(seconds) {
+            const button = document.getElementById("resend-otp-btn");
+            if (!button) return;
+
+            clearInterval(qmbOtpCooldownTimer);
+
+            let remaining = Number(seconds) || 60;
+            button.disabled = true;
+            button.style.opacity = "0.6";
+
+            const update = () => {
+                if (remaining <= 0) {
+                    clearInterval(qmbOtpCooldownTimer);
+                    qmbOtpCooldownTimer = null;
+                    button.disabled = false;
+                    button.style.opacity = "1";
+                    button.textContent = "إعادة إرسال الرمز";
+                    return;
+                }
+
+                button.textContent = `إعادة إرسال الرمز (${remaining})`;
+                remaining -= 1;
+            };
+
+            update();
+            qmbOtpCooldownTimer = setInterval(update, 1000);
+        }
+
+        async function verifyOTP() {
+            if (qmbOtpVerifying) return;
+
+            const otpInput = document.getElementById("otp-input");
+            const verifyButton = document.querySelector("#otp-step button.btn-primary");
+            const secret = String(otpInput?.value || "").trim();
+
+            if (!qmbOtpUserId || !qmbOtpEmail) {
+                setAuthStatus("انتهت جلسة التحقق. اطلب رمزًا جديدًا.", "error");
+                showAuthStep("email");
+                return;
+            }
+
+            if (!/^\d{6}$/.test(secret)) {
+                setAuthStatus("أدخل رمز التحقق المكوّن من 6 أرقام.", "error");
+                otpInput?.focus();
+                return;
+            }
+
+            try {
+                qmbOtpVerifying = true;
+                setAuthStatus("جاري التحقق من الرمز...", "info");
+                setAuthButtonLoading(verifyButton, "جاري التحقق...", "تأكيد الرمز");
+
+                const account = initQMBAppwrite();
+
+                // The secret is the 6-digit code entered by the user.
+                await account.createSession(qmbOtpUserId, secret);
+
+                // Clear the one-time token data after successful login.
+                sessionStorage.removeItem("qmb_otp_user_id");
+                sessionStorage.removeItem("qmb_otp_email");
+                qmbOtpUserId = "";
+                qmbOtpEmail = "";
+
+                const user = await account.get();
+
+                localStorage.setItem("qmb_logged_in", "true");
+                localStorage.setItem("qmb_user_email", user.email || "");
+
+                setAuthStatus("تم التحقق وتسجيل الدخول بنجاح.", "success");
+
+                const savedName = localStorage.getItem("qmb_profile_name") || user.name || "";
+                const savedPhone = localStorage.getItem("qmb_profile_phone") || "";
+
+                const fullnameInput = document.getElementById("fullname-input");
+                const phoneInput = document.getElementById("phone-input");
+
+                if (fullnameInput) fullnameInput.value = savedName;
+                if (phoneInput) phoneInput.value = savedPhone;
+
+                if (savedName && savedPhone) {
+                    applyQMBUserProfile(savedName, savedPhone, user.email);
+                    showQMBAppScreen();
+                } else {
+                    showAuthStep("profile");
+                }
+            } catch (error) {
+                console.error("QMB Appwrite verify OTP error:", error);
+                setAuthStatus(getQMBAuthErrorMessage(error), "error");
+            } finally {
+                qmbOtpVerifying = false;
+                setAuthButtonLoading(verifyButton, null, "تأكيد الرمز");
+            }
+        }
+
+        async function completeProfile() {
+            const fullnameInput = document.getElementById("fullname-input");
+            const phoneInput = document.getElementById("phone-input");
+
+            const fullname = String(fullnameInput?.value || "").trim();
+            const phone = String(phoneInput?.value || "").trim();
+
+            if (fullname.length < 2) {
+                setAuthStatus("أدخل اسمك الكامل.", "error");
+                fullnameInput?.focus();
+                return;
+            }
+
+            if (phone.length < 6) {
+                setAuthStatus("أدخل رقم هاتف صحيح.", "error");
+                phoneInput?.focus();
+                return;
+            }
+
+            try {
+                const account = initQMBAppwrite();
+
+                // Save the display name in the authenticated Appwrite account.
+                await account.updateName(fullname);
+
+                const user = await account.get();
+
+                localStorage.setItem("qmb_profile_name", fullname);
+                localStorage.setItem("qmb_profile_phone", phone);
+                localStorage.setItem("qmb_user_email", user.email || "");
+                localStorage.setItem("qmb_logged_in", "true");
+
+                applyQMBUserProfile(fullname, phone, user.email);
+                showQMBAppScreen();
+                setAuthStatus("");
+            } catch (error) {
+                console.error("QMB profile error:", error);
+                setAuthStatus(getQMBAuthErrorMessage(error), "error");
+            }
+        }
+
+        function applyQMBUserProfile(name, phone, email) {
+            const safeName = name || "عميل QMB";
+            const avatar = document.getElementById("user-avatar-img");
+            const modalAvatar = document.getElementById("modal-user-img");
+            const modalName = document.getElementById("modal-user-name");
+            const modalPhone = document.getElementById("modal-user-phone");
+
+            const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(safeName)}&background=2563eb&color=fff`;
+
+            if (avatar) avatar.src = avatarUrl;
+            if (modalAvatar) modalAvatar.src = avatarUrl;
+            if (modalName) modalName.textContent = safeName;
+            if (modalPhone) modalPhone.textContent = phone || email || "";
+        }
+
+        async function restoreQMBSession() {
+            try {
+                const account = initQMBAppwrite();
+                const user = await account.get();
+
+                localStorage.setItem("qmb_logged_in", "true");
+                localStorage.setItem("qmb_user_email", user.email || "");
+
+                const name = localStorage.getItem("qmb_profile_name") || user.name || "";
+                const phone = localStorage.getItem("qmb_profile_phone") || "";
+
+                if (name && phone) {
+                    applyQMBUserProfile(name, phone, user.email);
+                    showQMBAppScreen();
+                } else {
+                    const fullnameInput = document.getElementById("fullname-input");
+                    const phoneInput = document.getElementById("phone-input");
+
+                    if (fullnameInput) fullnameInput.value = name;
+                    if (phoneInput) phoneInput.value = phone;
+
+                    showAuthStep("profile");
+                }
+
+                return true;
+            } catch (error) {
+                // No valid Appwrite session is normal for a new visitor.
+                localStorage.removeItem("qmb_logged_in");
+                showQMBAuthScreen();
+
+                if (qmbOtpUserId && qmbOtpEmail) {
+                    const emailInput = document.getElementById("email-input");
+                    if (emailInput) emailInput.value = qmbOtpEmail;
+                    showAuthStep("otp");
+                } else {
+                    showAuthStep("email");
+                }
+
+                return false;
+            }
+        }
+
+        async function logout() {
+            try {
+                const account = initQMBAppwrite();
+                await account.deleteSession("current");
+            } catch (error) {
+                console.warn("QMB logout:", error);
+            }
+
+            localStorage.removeItem("qmb_logged_in");
+            localStorage.removeItem("qmb_user_email");
+            sessionStorage.removeItem("qmb_otp_user_id");
+            sessionStorage.removeItem("qmb_otp_email");
+
+            qmbOtpUserId = "";
+            qmbOtpEmail = "";
+
+            clearInterval(qmbOtpCooldownTimer);
+            qmbOtpCooldownTimer = null;
+
+            const emailInput = document.getElementById("email-input");
+            const otpInput = document.getElementById("otp-input");
+            const fullnameInput = document.getElementById("fullname-input");
+            const phoneInput = document.getElementById("phone-input");
+
+            if (emailInput) emailInput.value = "";
+            if (otpInput) otpInput.value = "";
+            if (fullnameInput) fullnameInput.value = "";
+            if (phoneInput) phoneInput.value = "";
+
+            setAuthStatus("");
+            showAuthStep("email");
+            showQMBAuthScreen();
+        }
+
+        function getQMBAuthErrorMessage(error) {
+            const message = String(error?.message || "").toLowerCase();
+
+            if (message.includes("rate") || message.includes("too many")) {
+                return "تم تجاوز حد المحاولات. انتظر قليلًا ثم حاول مرة أخرى.";
+            }
+
+            if (message.includes("invalid") && message.includes("secret")) {
+                return "رمز التحقق غير صحيح أو انتهت صلاحيته. اطلب رمزًا جديدًا.";
+            }
+
+            if (message.includes("expired")) {
+                return "انتهت صلاحية رمز التحقق. اطلب رمزًا جديدًا.";
+            }
+
+            if (message.includes("cors") || message.includes("origin")) {
+                return "تعذر الاتصال بـ Appwrite. تأكد من إضافة qmbsdg-netizen.github.io كـ Web Platform.";
+            }
+
+            if (message.includes("project") && message.includes("not found")) {
+                return "لم يتم العثور على مشروع Appwrite. تحقق من Project ID.";
+            }
+
+            return error?.message
+                ? `حدث خطأ: ${error.message}`
+                : "حدث خطأ أثناء التحقق. حاول مرة أخرى.";
+        }
+
+        // Restore an existing Appwrite session when the page opens.
+        document.addEventListener("DOMContentLoaded", () => {
+            setTimeout(() => {
+                restoreQMBSession();
+            }, 0);
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const isVerified = localStorage.getItem("qmb_account_verified") === "true";
+            updateVerificationUI(isVerified);
+            updatePlatformLiquidity();
+            setInterval(updatePlatformLiquidity, 12 * 60 * 60 * 1000);
+
+            // إغلاق النوافذ عند النقر على الخلفية الخارجية Outside Click
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            });
+        });
+
+        function updateVerificationUI(verified) {
+            const topVerifyText = document.getElementById('top-verify-text');
+            const topVerificationBtn = document.getElementById('top-verification-btn');
+            const accountStatusText = document.getElementById('account-status-text');
+            const pending = localStorage.getItem("qmb_kyc_status") === "pending";
+
+            const profileBadge = document.getElementById("profile-verification-badge");
+
+            if (verified) {
+                if (topVerifyText) topVerifyText.innerText = "حساب موثق";
+                if (topVerificationBtn) {
+                    topVerificationBtn.style.background = "linear-gradient(135deg,#10b981,#059669)";
+                    topVerificationBtn.style.color = "#fff";
+                }
+                if (accountStatusText) accountStatusText.innerHTML = "موثق ✅";
+                if (profileBadge) profileBadge.classList.remove("hidden");
+            } else if (pending) {
+                if (profileBadge) profileBadge.classList.add("hidden");
+                if (topVerifyText) topVerifyText.innerText = "قيد المراجعة";
+                if (topVerificationBtn) {
+                    topVerificationBtn.style.background = "linear-gradient(135deg,#f59e0b,#d97706)";
+                    topVerificationBtn.style.color = "#fff";
+                }
+                if (accountStatusText) accountStatusText.innerHTML = "قيد المراجعة ⏳";
+            } else {
+                if (profileBadge) profileBadge.classList.add("hidden");
+                if (topVerifyText) topVerifyText.innerText = "إكمال التحقق";
+                if (topVerificationBtn) {
+                    topVerificationBtn.style.background = "linear-gradient(135deg,#ef4444,#dc2626)";
+                    topVerificationBtn.style.color = "#fff";
+                }
+                if (accountStatusText) accountStatusText.innerHTML = "غير موثق ❌";
+            }
+        }
+
+        function openVerificationModal() {
+            const modal = document.getElementById('verification-modal');
+            if (modal) modal.classList.remove('hidden');
+
+            const type = localStorage.getItem("qmb_kyc_document_type") || "";
+            const select = document.getElementById("kyc-document-type");
+            if (select) select.value = type;
+
+            updateKycSelectedStatus();
+            updateKycCompleteButton();
+        }
+
+        function closeVerificationModal() {
+            document.getElementById('verification-modal').classList.add('hidden');
+        }
+
+        function handleKycFileUpload(event, side) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            if (side === "front") {
+                localStorage.setItem("qmb_kyc_front_uploaded", "true");
+                const label = document.getElementById("kyc-front-label");
+                if (label) label.innerText = "تم رفع صورة إثبات الهوية ✓";
+            }
+
+            if (side === "selfie") {
+                localStorage.setItem("qmb_kyc_selfie_uploaded", "true");
+                const label = document.getElementById("kyc-selfie-label");
+                if (label) label.innerText = "تم رفع سيلفي الوجه ✓";
+            }
+
+            updateKycSelectedStatus();
+            updateKycCompleteButton();
+        }
+
+        function updateKycSelectedStatus() {
+            const status = document.getElementById("kyc-selected-status");
+            if (!status) return;
+
+            const type = document.getElementById("kyc-document-type")?.value;
+            const front = localStorage.getItem("qmb_kyc_front_uploaded") === "true";
+            const selfie = localStorage.getItem("qmb_kyc_selfie_uploaded") === "true";
+
+            const items = [];
+            items.push(type ? "نوع الإثبات ✓" : "نوع الإثبات لم يُحدد");
+            items.push(front ? "صورة الإثبات ✓" : "صورة الإثبات لم تُرفع");
+            items.push(selfie ? "سيلفي الوجه ✓" : "سيلفي الوجه لم تُرفع");
+
+            status.innerText = items.join(" • ");
+            status.style.color = (type && front && selfie) ? "#059669" : "var(--text-secondary)";
+        }
+
+        function updateKycCompleteButton() {
+            const button = document.getElementById("kyc-complete-btn");
+            if (!button) return;
+
+            const type = document.getElementById("kyc-document-type")?.value;
+            const front = localStorage.getItem("qmb_kyc_front_uploaded") === "true";
+            const selfie = localStorage.getItem("qmb_kyc_selfie_uploaded") === "true";
+            const ready = !!type && front && selfie;
+
+            button.disabled = !ready;
+            button.style.opacity = ready ? "1" : ".65";
+            button.style.cursor = ready ? "pointer" : "not-allowed";
+            button.style.background = ready
+                ? "linear-gradient(135deg,#2563eb,#1d4ed8)"
+                : "linear-gradient(135deg,#94a3b8,#64748b)";
+        }
+
+        function completeKycVerification() {
+            const type = document.getElementById("kyc-document-type")?.value;
+            const front = localStorage.getItem("qmb_kyc_front_uploaded") === "true";
+            const selfie = localStorage.getItem("qmb_kyc_selfie_uploaded") === "true";
+
+            if (!type || !front || !selfie) {
+                updateKycSelectedStatus();
+                updateKycCompleteButton();
+                return;
+            }
+
+            localStorage.setItem("qmb_account_verified", "true");
+            localStorage.removeItem("qmb_kyc_status");
+            updateVerificationUI(true);
+
+            closeVerificationModal();
+
+            const overlay = document.getElementById("successOverlay");
+            if (overlay) {
+                overlay.classList.add("active");
+            }
+        }
+
+        function returnToHomeScreen() {
+            document.getElementById('successOverlay').classList.remove('active');
+        }
+
+        function closeCustomAlert() {
+            document.getElementById('custom-alert-modal').classList.remove('active');
+        }
+
+        function openBigAmountModal() {
+            document.getElementById('big-amount-modal').classList.remove('hidden');
+        }
+
+        function closeBigAmountModal() {
+            document.getElementById('big-amount-modal').classList.add('hidden');
+        }
+
+        function setBigQuickAmount(val) {
+            document.getElementById('big-quantity-input').value = val;
+            updateBigConversion();
+        }
+
+        /* التحويل التلقائي بين USDT و SDG */
+        const USDT_BUY_RATE_SDG = 6100;
+        const USDT_SELL_RATE_SDG = 5910;
+
+        function formatSDG(value) {
+            return Math.round(value).toLocaleString('en-US');
+        }
+
+        function updateBuyConversion() {
+            const qty = parseFloat(document.getElementById('buy-quantity-input').value) || 0;
+            document.getElementById('buy-sdg-conversion').innerText = `≈ ${formatSDG(qty * USDT_BUY_RATE_SDG)} SDG`;
+        }
+
+        function updateSellConversion() {
+            const qty = parseFloat(document.getElementById('sell-quantity-input').value) || 0;
+            document.getElementById('sell-sdg-conversion').innerText = `≈ ${formatSDG(qty * USDT_SELL_RATE_SDG)} SDG`;
+        }
+
+        function updateBigConversion() {
+            const qty = parseFloat(document.getElementById('big-quantity-input').value) || 0;
+            document.getElementById('big-sdg-buy').innerText = `شراء ≈ ${formatSDG(qty * USDT_BUY_RATE_SDG)} SDG`;
+            document.getElementById('big-sdg-sell').innerText = `بيع ≈ ${formatSDG(qty * USDT_SELL_RATE_SDG)} SDG`;
+        }
+
+        let currentBuyQuantity = 0;
+        let selectedPaymentOption = '';
+
+        function proceedBigAmountBuy() {
+            const qty = document.getElementById('big-quantity-input').value;
+            if (!qty || parseFloat(qty) < 1000) {
+                document.getElementById('custom-alert-modal').classList.add('active');
+                return;
+            }
+            currentBuyQuantity = qty;
+            document.getElementById('display-buy-type').innerText = "عرض المبالغ الكبيرة (شراء)";
+            document.getElementById('display-buy-qty').innerText = currentBuyQuantity;
+
+            selectedPaymentOption = '';
+            document.querySelectorAll('.payment-method-card').forEach(el => el.classList.remove('active-method'));
+            document.getElementById('receipt-upload-section').classList.add('hidden');
+            document.getElementById('btn-done-payment').classList.add('hidden');
+
+            closeBigAmountModal();
+            document.getElementById('buy-payment-modal').classList.remove('hidden');
+        }
+
+        let currentProcessType = 'بيع USDT';
+        let currentSellQuantity = 0;
+
+        function proceedBigAmountSell() {
+            const qty = document.getElementById('big-quantity-input').value;
+            if (!qty || parseFloat(qty) < 1000) {
+                document.getElementById('custom-alert-modal').classList.add('active');
+                return;
+            }
+            currentSellQuantity = qty;
+            currentProcessType = 'عرض المبالغ الكبيرة (بيع)';
+            document.getElementById('display-process-type').innerText = currentProcessType;
+            document.getElementById('display-sell-qty').innerText = currentSellQuantity;
+
+            document.getElementById('sell-receipt-label-text').innerText = "إرفاق إيصال الدفع";
+            document.getElementById('btn-done-sell-payment').classList.add('hidden');
+            document.getElementById('receipt-file-input').value = "";
+
+            closeBigAmountModal();
+            document.getElementById('sell-payment-modal').classList.remove('hidden');
+        }
+
+        function openBuyModal() {
+            document.getElementById('buy-amount-modal').classList.remove('hidden');
+        }
+
+        function closeBuyModal() {
+            document.getElementById('buy-amount-modal').classList.add('hidden');
+        }
+
+        function setBuyQuickAmount(val) {
+            document.getElementById('buy-quantity-input').value = val;
+            updateBuyConversion();
+        }
+
+        function proceedToBuyPaymentGateway() {
+            const qty = document.getElementById('buy-quantity-input').value;
+            if (!qty || parseFloat(qty) <= 0) {
+                alert('الرجاء إدخال كمية صحيحة');
+                return;
+            }
+            currentBuyQuantity = qty;
+            document.getElementById('display-buy-type').innerText = "شراء USDT";
+            document.getElementById('display-buy-qty').innerText = currentBuyQuantity;
+
+            selectedPaymentOption = '';
+            document.querySelectorAll('.payment-method-card').forEach(el => el.classList.remove('active-method'));
+            document.getElementById('receipt-upload-section').classList.add('hidden');
+            document.getElementById('btn-done-payment').classList.add('hidden');
+
+            closeBuyModal();
+            document.getElementById('buy-payment-modal').classList.remove('hidden');
+        }
+
+        function togglePaymentCard(methodName) {
+            selectedPaymentOption = methodName;
+            
+            document.querySelectorAll('.payment-method-card').forEach(card => {
+                card.classList.remove('active-method');
+            });
+
+            let activeCardId = '';
+            if(methodName === 'بنكك') activeCardId = 'card-bonk';
+            if(methodName === 'فوري') activeCardId = 'card-fawry';
+            if(methodName === 'اووكاش') activeCardId = 'card-owocash';
+            if(methodName === 'ماي كاشي') activeCardId = 'card-mycashi';
+
+            const selectedCard = document.getElementById(activeCardId);
+            if(selectedCard) {
+                selectedCard.classList.add('active-method');
+            }
+
+            document.getElementById('receipt-upload-section').classList.remove('hidden');
+        }
+
+        function handleReceiptSelected(event) {
+            if (event.target.files && event.target.files[0]) {
+                document.getElementById('receipt-label-text').innerText = "✓ تم إرفاق الإشعار بنجاح (تغيير)";
+                document.getElementById('btn-done-payment').classList.remove('hidden');
+            }
+        }
+
+        function submitPaymentAndOpenWhatsApp() {
+            if (!selectedPaymentOption) {
+                alert('الرجاء تحديد طريقة الدفع أولاً');
+                return;
+            }
+            const message = `مرحباً، أود إتمام معاملة كمية ${currentBuyQuantity} USDT عبر المنصة (شراء).\nطريقة الدفع المختارة: ${selectedPaymentOption}.\nلقد قمت بتحويل المبلغ وهذا هو إيصال الدفع المرفق.`;
+            const whatsappUrl = `https://wa.me/201271915488?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
+        function closeBuyPaymentModal() {
+            document.getElementById('buy-payment-modal').classList.add('hidden');
+        }
+
+        function openSellModal() {
+            currentProcessType = 'بيع USDT';
+            document.getElementById('investment-modal-title').innerText = "حدد الكمية التي تريد بيعها";
+            document.getElementById('sell-amount-modal').classList.remove('hidden');
+        }
+
+        function openInvestmentModal(planName) {
+            const isVerified = localStorage.getItem("qmb_account_verified") === "true";
+            if (!isVerified) {
+                document.getElementById('investment-kyc-alert-modal').classList.add('active');
+                return;
+            }
+
+            currentProcessType = planName;
+            document.getElementById('investment-modal-title').innerText = `حدد كمية ${planName}`;
+            document.getElementById('sell-amount-modal').classList.remove('hidden');
+        }
+
+        function closeInvestmentKycAlert() {
+            document.getElementById('investment-kyc-alert-modal').classList.remove('active');
+            openVerificationModal();
+        }
+
+        function closeSellModal() {
+            document.getElementById('sell-amount-modal').classList.add('hidden');
+        }
+
+        function setSellQuickAmount(val) {
+            document.getElementById('sell-quantity-input').value = val;
+            updateSellConversion();
+        }
+
+        function proceedToPaymentGateway() {
+            const inputVal = document.getElementById('sell-quantity-input').value;
+            if (!inputVal || parseFloat(inputVal) <= 0) {
+                alert('الرجاء إدخال كمية صحيحة');
+                return;
+            }
+            currentSellQuantity = inputVal;
+            document.getElementById('display-process-type').innerText = currentProcessType;
+            document.getElementById('display-sell-qty').innerText = currentSellQuantity;
+            
+            document.getElementById('sell-receipt-label-text').innerText = "إرفاق إيصال الدفع";
+            document.getElementById('btn-done-sell-payment').classList.add('hidden');
+            document.getElementById('receipt-file-input').value = "";
+
+            closeSellModal();
+            document.getElementById('sell-payment-modal').classList.remove('hidden');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('sell-payment-modal').classList.add('hidden');
+        }
+
+        function handleSellReceiptSelected(event) {
+            if (event.target.files && event.target.files[0]) {
+                document.getElementById('sell-receipt-label-text').innerText = "✓ تم إرفاق الإيصال بنجاح (تغيير)";
+                document.getElementById('btn-done-sell-payment').classList.remove('hidden');
+            }
+        }
+
+        function submitSellPaymentAndOpenWhatsApp() {
+            const message = `مرحباً، أود إتمام معاملة كمية ${currentSellQuantity} USDT عبر المنصة (${currentProcessType}). لقد قمت بتحويل المبلغ وهذا هو إيصال الدفع المرفق.`;
+            const whatsappUrl = `https://wa.me/201271915488?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
+        /* دوال خدمة التحويلات الدولية */
+        let selectedIntlLocalOption = '';
+
+        function openIntlTransferModal() {
+            document.getElementById('country-select').value = "";
+            document.getElementById('intl-step-details').classList.add('hidden');
+            document.getElementById('intl-amount').value = "";
+            document.getElementById('intl-sender-name').value = "";
+            document.getElementById('intl-sender-phone').value = "";
+            document.getElementById('intl-receiver-name').value = "";
+            document.getElementById('intl-receiver-phone').value = "";
+            document.getElementById('intl-receiver-address').value = "";
+            document.getElementById('intl-receiver-bank-name').value = "";
+            document.getElementById('intl-receiver-bank-account').value = "";
+            selectedIntlLocalOption = '';
+            document.querySelectorAll('#intl-transfer-modal .payment-method-card').forEach(el => el.classList.remove('active-method'));
+            document.getElementById('intl-transfer-modal').classList.remove('hidden');
+        }
+
+        function closeIntlTransferModal() {
+            document.getElementById('intl-transfer-modal').classList.add('hidden');
+        }
+
+        function onIntlCountrySelected() {
+            const country = document.getElementById('country-select').value;
+            if (country) {
+                document.getElementById('intl-step-details').classList.remove('hidden');
+            }
+        }
+
+        function toggleIntlLocalCard(methodName) {
+            selectedIntlLocalOption = methodName;
+            document.querySelectorAll('#intl-transfer-modal .payment-method-card').forEach(card => {
+                card.classList.remove('active-method');
+            });
+            let activeCardId = '';
+            if(methodName === 'بنكك') activeCardId = 'intl-card-bonk';
+            if(methodName === 'فوري') activeCardId = 'intl-card-fawry';
+            if(methodName === 'اووكاش') activeCardId = 'intl-card-owocash';
+            if(methodName === 'ماي كاشي') activeCardId = 'intl-card-mycashi';
+
+            const selectedCard = document.getElementById(activeCardId);
+            if(selectedCard) {
+                selectedCard.classList.add('active-method');
+            }
+        }
+
+        function submitIntlTransferToWhatsapp() {
+            const selectedCountry = document.getElementById('country-select').value;
+            const amount = document.getElementById('intl-amount').value;
+            const senderName = document.getElementById('intl-sender-name').value;
+            const senderPhone = document.getElementById('intl-sender-phone').value;
+            const receiverName = document.getElementById('intl-receiver-name').value;
+            const receiverPhone = document.getElementById('intl-receiver-phone').value;
+            const receiverAddress = document.getElementById('intl-receiver-address').value;
+            const receiverBankName = document.getElementById('intl-receiver-bank-name').value;
+            const receiverBankAccount = document.getElementById('intl-receiver-bank-account').value;
+
+            if (!selectedCountry) {
+                alert('الرجاء اختيار الدولة أولاً');
+                return;
+            }
+            if (!amount) {
+                alert('الرجاء أدخل المبلغ المراد إرساله');
+                return;
+            }
+            if (!selectedIntlLocalOption) {
+                alert('الرجاء اختيار طريقة الدفع المحلية');
+                return;
+            }
+
+            const message = `مرحباً، أود إتمام معاملة تحويل دولي:\n` +
+                `- الدولة المراد التحويل إليها: ${selectedCountry}\n` +
+                `- المبلغ المراد إرساله: ${amount}\n` +
+                `- طريقة الدفع المحلية: ${selectedIntlLocalOption}\n` +
+                `- اسم المرسل: ${senderName}\n` +
+                `- رقم هاتف المرسل: ${senderPhone}\n` +
+                `- اسم المستلم: ${receiverName}\n` +
+                `- رقم هاتف المستلم: ${receiverPhone}\n` +
+                `- عنوان المستلم: ${receiverAddress}\n` +
+                `- اسم بنك المستلم: ${receiverBankName}\n` +
+                `- رقم حساب بنك المستلم: ${receiverBankAccount}`;
+
+            const whatsappUrl = `https://wa.me/201271915488?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
+        /* دوال الخدمات العامة المباشرة */
+        let activeGenericServiceName = '';
+
+        function openGenericServiceModal(serviceName, serviceDesc) {
+            activeGenericServiceName = serviceName;
+            document.getElementById('generic-service-title').innerText = serviceName;
+            document.getElementById('generic-service-desc').innerText = serviceDesc;
+            document.getElementById('generic-service-modal').classList.remove('hidden');
+        }
+
+        function closeGenericServiceModal() {
+            document.getElementById('generic-service-modal').classList.add('hidden');
+        }
+
+        function submitGenericServiceToWhatsapp() {
+            const message = `مرحباً، أود الإستفسار وطلب خدمة: ${activeGenericServiceName}.`;
+            const whatsappUrl = `https://wa.me/201271915488?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
+        /* دوال خدمة فتح حساب بايبال */
+        function openPaypalServiceModal() {
+            document.getElementById('paypal-service-modal').classList.remove('hidden');
+        }
+
+        function closePaypalServiceModal() {
+            document.getElementById('paypal-service-modal').classList.add('hidden');
+        }
+
+        function proceedFromPaypalToPayment() {
+            closePaypalServiceModal();
+            document.getElementById('paypal-payment-method-modal').classList.remove('hidden');
+        }
+
+        function closePaypalPaymentMethodModal() {
+            document.getElementById('paypal-payment-method-modal').classList.add('hidden');
+        }
+
+        function selectPaypalUsdtPayment() {
+            closePaypalPaymentMethodModal();
+            document.getElementById('paypal-receipt-label').innerText = "إرفاق إيصال الدفع";
+            document.getElementById('btn-paypal-done').classList.add('hidden');
+            document.getElementById('paypal-receipt-input').value = "";
+            document.getElementById('paypal-usdt-gateway-modal').classList.remove('hidden');
+        }
+
+        function closePaypalUsdtGateway() {
+            document.getElementById('paypal-usdt-gateway-modal').classList.add('hidden');
+        }
+
+        function handlePaypalReceiptSelected(event) {
+            if (event.target.files && event.target.files[0]) {
+                document.getElementById('paypal-receipt-label').innerText = "✓ تم إرفاق الإيصال بنجاح (تغيير)";
+                document.getElementById('btn-paypal-done').classList.remove('hidden');
+            }
+        }
+
+        function submitPaypalOrder() {
+            const message = `مرحباً، أود طلب خدمة فتح حساب بايبال (الرسوم: 50$ / ما يعادل 302,500 SDG). لقد قمت بتحويل المبلغ عبر USDT وهذا هو إيصال الدفع المرفق.`;
+            const whatsappUrl = `https://wa.me/201271915488?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
+        function selectPaypalLocalPayment() {
+            closePaypalPaymentMethodModal();
+            document.querySelectorAll('#paypal-local-gateway-modal .payment-method-card').forEach(el => el.classList.remove('active-method'));
+            document.getElementById('paypal-local-receipt-section').classList.add('hidden');
+            document.getElementById('btn-paypal-local-done').classList.add('hidden');
+            document.getElementById('paypal-local-gateway-modal').classList.remove('hidden');
+        }
+
+        function closePaypalLocalGateway() {
+            document.getElementById('paypal-local-gateway-modal').classList.add('hidden');
+        }
+
+        let selectedPaypalLocalOption = '';
+        function togglePaypalLocalCard(methodName) {
+            selectedPaypalLocalOption = methodName;
+            document.querySelectorAll('#paypal-local-gateway-modal .payment-method-card').forEach(card => {
+                card.classList.remove('active-method');
+            });
+            let activeCardId = '';
+            if(methodName === 'بنكك') activeCardId = 'p-card-bonk';
+            if(methodName === 'فوري') activeCardId = 'p-card-fawry';
+            if(methodName === 'اووكاش') activeCardId = 'p-card-owocash';
+            if(methodName === 'ماي كاشي') activeCardId = 'p-card-mycashi';
+
+            const selectedCard = document.getElementById(activeCardId);
+            if(selectedCard) {
+                selectedCard.classList.add('active-method');
+            }
+            document.getElementById('paypal-local-receipt-section').classList.remove('hidden');
+        }
+
+        function handlePaypalLocalReceiptSelected(event) {
+            if (event.target.files && event.target.files[0]) {
+                document.getElementById('paypal-local-receipt-label').innerText = "✓ تم إرفاق الإيصال بنجاح (تغيير)";
+                document.getElementById('btn-paypal-local-done').classList.remove('hidden');
+            }
+        }
+
+        function submitPaypalLocalOrder() {
+            if (!selectedPaypalLocalOption) {
+                alert('الرجاء تحديد طريقة الدفع أولاً');
+                return;
+            }
+            const message = `مرحباً، أود طلب خدمة فتح حساب بايبال (الرسوم: 50$ / ما يعادل 302,500 SDG). طريقة الدفع: ${selectedPaypalLocalOption}. لقد قمت بتحويل المبلغ وهذا هو إيصال الدفع المرفق.`;
+            const whatsappUrl = `https://wa.me/201271915488?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
+        /* دوال خدمة فتح حساب إكسنيس (Exness) */
+        function openExnessServiceModal() {
+            document.getElementById('exness-service-modal').classList.remove('hidden');
+        }
+
+        function closeExnessServiceModal() {
+            document.getElementById('exness-service-modal').classList.add('hidden');
+        }
+
+        function proceedFromExnessToPayment() {
+            closeExnessServiceModal();
+            document.getElementById('exness-payment-method-modal').classList.remove('hidden');
+        }
+
+        function closeExnessPaymentMethodModal() {
+            document.getElementById('exness-payment-method-modal').classList.add('hidden');
+        }
+
+        function selectExnessUsdtPayment() {
+            closeExnessPaymentMethodModal();
+            document.getElementById('exness-receipt-label').innerText = "إرفاق إيصال الدفع";
+            document.getElementById('btn-exness-done').classList.add('hidden');
+            document.getElementById('exness-receipt-input').value = "";
+            document.getElementById('exness-usdt-gateway-modal').classList.remove('hidden');
+        }
+
+        function closeExnessUsdtGateway() {
+            document.getElementById('exness-usdt-gateway-modal').classList.add('hidden');
+        }
+
+        function handleExnessReceiptSelected(event) {
+            if (event.target.files && event.target.files[0]) {
+                document.getElementById('exness-receipt-label').innerText = "✓ تم إرفاق الإيصال بنجاح (تغيير)";
+                document.getElementById('btn-exness-done').classList.remove('hidden');
+            }
+        }
+
+        function submitExnessOrder() {
+            const message = `مرحباً، أود طلب خدمة فتح حساب إكسنيس (الرسوم: 30$ / ما يعادل 181,500 SDG). لقد قمت بتحويل المبلغ عبر USDT وهذا هو إيصال الدفع المرفق.`;
+            const whatsappUrl = `https://wa.me/201271915488?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
+        function selectExnessLocalPayment() {
+            closeExnessPaymentMethodModal();
+            document.querySelectorAll('#exness-local-gateway-modal .payment-method-card').forEach(el => el.classList.remove('active-method'));
+            document.getElementById('exness-local-receipt-section').classList.add('hidden');
+            document.getElementById('btn-exness-local-done').classList.add('hidden');
+            document.getElementById('exness-local-gateway-modal').classList.remove('hidden');
+        }
+
+        function closeExnessLocalGateway() {
+            document.getElementById('exness-local-gateway-modal').classList.add('hidden');
+        }
+
+        let selectedExnessLocalOption = '';
+        function toggleExnessLocalCard(methodName) {
+            selectedExnessLocalOption = methodName;
+            document.querySelectorAll('#exness-local-gateway-modal .payment-method-card').forEach(card => {
+                card.classList.remove('active-method');
+            });
+            let activeCardId = '';
+            if(methodName === 'بنكك') activeCardId = 'ex-card-bonk';
+            if(methodName === 'فوري') activeCardId = 'ex-card-fawry';
+            if(methodName === 'اووكاش') activeCardId = 'ex-card-owocash';
+            if(methodName === 'ماي كاشي') activeCardId = 'ex-card-mycashi';
+
+            const selectedCard = document.getElementById(activeCardId);
+            if(selectedCard) {
+                selectedCard.classList.add('active-method');
+            }
+            document.getElementById('exness-local-receipt-section').classList.remove('hidden');
+        }
+
+        function handleExnessLocalReceiptSelected(event) {
+            if (event.target.files && event.target.files[0]) {
+                document.getElementById('exness-local-receipt-label').innerText = "✓ تم إرفاق الإيصال بنجاح (تغيير)";
+                document.getElementById('btn-exness-local-done').classList.remove('hidden');
+            }
+        }
+
+        function submitExnessLocalOrder() {
+            if (!selectedExnessLocalOption) {
+                alert('الرجاء تحديد طريقة الدفع أولاً');
+                return;
+            }
+            const message = `مرحباً، أود طلب خدمة فتح حساب إكسنيس (الرسوم: 30$ / ما يعادل 181,500 SDG). طريقة الدفع: ${selectedExnessLocalOption}. لقد قمت بتحويل المبلغ وهذا هو إيصال الدفع المرفق.`;
+            const whatsappUrl = `https://wa.me/201271915488?text=` + encodeURIComponent(message);
+            window.location.href = whatsappUrl;
+        }
+
+        function openProfileModal() {
+            document.getElementById('profile-modal').classList.remove('hidden');
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profile-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
